@@ -25,8 +25,9 @@ export interface ITimeProps {
   lineColor?: string // 折线图颜色
   highest?: IHighestProps // 最高线
   fontSize?: number // 字体大小
+  fontFamily?: string
   cross?: ICrossProps // 十字准线
-  tradeTimes?: Array<string> // 交易时间段, 如要更改, 请同时理性 xLabels 的值
+  tradeTimes?: Array<string> // 交易时间段, 如要更改, 请同时更改 xLabels 的值
   basic?: IBasicProps // 基线
   tooltip?: ITooltipProps
 }
@@ -41,21 +42,23 @@ export type LineType = 'solid' | 'dashed'
 export const TRADE_TIMES = ['9:30~11:30', '13:00~15:00']
 
 export const DEFAULT_FONT_SIZE = 12 // 默认字体大小
+export const DEFAULT_FONT_FAMILY = 'Arial' // 默认字体
 
 // 网格背景属性
 export interface IGridProps {
   show?: boolean
   color?: string // 颜色
   lineType?: LineType // 线条类型, 默认为 dashed
-  horizontalLines?: number // 纵向线条数
-  verticalLines?: number // 横向线条数
+  verticalLines?: number // 纵向线条数
 }
 
 export interface ITimeGridProps extends IGridProps {
   width: number // 长度
   height: number // 宽度
-  padding: number
-  isAxisRight: boolean
+  horizontalLines: number
+  isYLeft: boolean
+  xPoints: Array<{ [K: string]: any }>
+  yPoints: Array<{ [K: string]: any }>
 }
 
 // 默认的网格背景属性
@@ -63,7 +66,7 @@ export const GridDefaultProps = {
   color: 'rgba(186, 186, 186, 0.2)',
   lineType: 'dashed',
   horizontalLines: 4,
-  verticalLines: 4
+  verticalLines: 3
 }
 
 // x 轴 和 y 轴
@@ -71,24 +74,37 @@ export interface IAxisProps {
   lineColor?: string // 颜色
   textColor?: string // 文字颜色
   xLabels?: Array<string> // x 轴
-  yLabels: Array<string | number> // y 轴
+  yLabels?: Array<string | number> // y 轴
   yPosition?: 'left' | 'right'
-  padding?: number // 间距
   fontSize?: number
+  padding?: number
+  fontFamily?: string
+  needXLine?: boolean
+  needYLine?: boolean
 }
 
 export interface ITimeAxisProps extends IAxisProps {
   width: number // 长度
   height: number // 宽度
+  maxPrice: number
+  minPrice: number
+  isYLeft: boolean
+  totalWidth: number
+  totalHeight: number
+  xPoints: Array<{ [K: string]: any }>
+  yPoints: Array<{ [K: string]: any }>
 }
 
 // 默认 x 轴 和 y 轴 属性
 export const AxisDefaultProps = {
   lineColor: '#e0e0e0',
-  textColor: '#666666',
+  textColor: '#bdc0c0',
   xLabels: ['09:30', '11:30/13:00', '15:00'],
   yPosition: 'left',
-  padding: 30
+  padding: 30,
+  needXLine: true,
+  needYLine: false,
+  lineWidthOrHeight: 5
 }
 
 // 价格最高线
@@ -101,6 +117,7 @@ export interface IHighestProps {
 
 // 基线属性
 export interface IBasicProps extends IHighestProps {
+  show?: boolean
   data: number
   lineColor?: string
   textColor?: string
@@ -110,11 +127,11 @@ export interface IBasicProps extends IHighestProps {
 export interface ITimeHighestProps extends IHighestProps {
   width: number
   height: number
-  maxPrice: number
+  price: number
   fontSize: number
-  padding: number
+  fontFamily: string
+  isAxisLeft: boolean
   y: number
-  isAxisRight: boolean
 }
 
 // 默认价格最高线属性
@@ -137,7 +154,6 @@ export interface ITimeCrossProps extends ICrossProps {
   y: number
   width: number
   height: number
-  padding: number
 }
 
 // 十字准线默认属性
@@ -147,4 +163,4 @@ export const DefaultCrossProps = {
 }
 
 export const XOffset: number = 0 // x 轴偏移量, 第一个元素需要向右偏移, 最后一个元素需要向左偏移
-export const AxisTextOffset: number = 5 // 文字偏移量, x 轴和 y 轴第一个和最后一个元素需要偏移
+export const AxisTextOffset: number = 8 // 文字偏移量, x 轴和 y 轴第一个和最后一个元素需要偏移

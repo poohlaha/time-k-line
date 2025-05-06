@@ -5,6 +5,7 @@
  */
 import React from 'react'
 import { AxisTextOffset, HighestDefaultProps, ITimeHighestProps } from '../../types/time'
+import Utils from '@pages/time-k-line/utils'
 
 const Highest: React.FC<ITimeHighestProps> = (props: ITimeHighestProps) => {
   const render = () => {
@@ -14,11 +15,13 @@ const Highest: React.FC<ITimeHighestProps> = (props: ITimeHighestProps) => {
     const strokeDasharray = lineType === 'dashed' ? '4 2' : 'none'
 
     // 计算 y 坐标
-    const maxPrice = props.maxPrice
-    const y = props.padding + props.y
+    const price = props.price
+    const y = props.y
 
+    const textWidth = Utils.onMeasureTextWidth(`${price}`, props.fontSize, props.fontFamily)
+    const textX = props.isAxisLeft ? textWidth + AxisTextOffset : props.width - AxisTextOffset
     return (
-      <>
+      <g>
         {/* 水平线 */}
         <line
           x1={0}
@@ -32,15 +35,17 @@ const Highest: React.FC<ITimeHighestProps> = (props: ITimeHighestProps) => {
 
         {/* 文字标签 */}
         <text
-          x={props.width - AxisTextOffset}
-          y={y - AxisTextOffset}
+          x={textX}
+          y={y - AxisTextOffset / 2}
           fill={textColor}
           textAnchor="end"
           fontSize={props.fontSize}
+          fontFamily={props.fontFamily}
+          style={{ userSelect: 'none', pointerEvents: 'none' }}
         >
-          {maxPrice.toFixed(2)}
+          {price.toFixed(2)}
         </text>
-      </>
+      </g>
     )
   }
 

@@ -16,17 +16,10 @@ const Cross: React.FC<ITimeCrossProps> = (props: ITimeCrossProps): ReactElement 
     const strokeDasharray = lineType === 'dashed' ? '4 2' : 'none'
 
     return (
-      <>
-        <line
-          x1={props.x}
-          y1={0}
-          x2={props.x}
-          y2={props.height - props.padding}
-          stroke={color}
-          strokeDasharray={strokeDasharray}
-        />
+      <svg width={props.width} height={props.height}>
+        <line x1={props.x} y1={0} x2={props.x} y2={props.height} stroke={color} strokeDasharray={strokeDasharray} />
         <line x1={0} y1={props.y} x2={props.width} y2={props.y} stroke={color} strokeDasharray={strokeDasharray} />
-      </>
+      </svg>
     )
   }
 
