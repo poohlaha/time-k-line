@@ -22,6 +22,7 @@ export interface ITimeKTooltipProps extends ITooltipProps {
 export interface ITooltipDataProps {
   label: string
   value: string
+  color: string
 }
 
 export const TooltipDefaultDataProps = {

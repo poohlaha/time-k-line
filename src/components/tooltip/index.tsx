@@ -62,7 +62,9 @@ const Tooltip: React.FC<ITimeKTooltipProps> = (props: PropsWithChildren<ITimeKTo
               key={index}
             >
               <p className="text-xs mr-1">{item.label || ''}</p>
-              <p className="text-xs">{item.value || '-'}</p>
+              <p className="text-xs" style={{ color: item.color || '' }}>
+                {item.value || '-'}
+              </p>
             </div>
           )
         })}

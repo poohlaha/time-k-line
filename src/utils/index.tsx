@@ -38,9 +38,9 @@ const Utils = {
     }
 
     // 时间转分
-    const timeToMinute = (time: string) => {
+    const timeToMinute = (time: string, reduceOne: boolean = false) => {
       const [h, m] = time.split(':').map(Number)
-      return h * 60 + m
+      return h * 60 + m + (reduceOne ? 1 : 0)
     }
 
     // 获取分钟
@@ -54,7 +54,9 @@ const Utils = {
     }
 
     let minutes: Array<number> = []
-    for (const time of tradTimes) {
+    let hasReduceOne: boolean = false
+    for (let i = 0; i < tradTimes.length; i++) {
+      const time = tradTimes[i]
       let [start, end] = ['', '']
       if (time.indexOf('~') !== -1) {
         [start, end] = time.split('~') || []
@@ -64,41 +66,18 @@ const Utils = {
         [start, end] = [time, time]
       }
 
-      const startMin = timeToMinute(start)
+      if (i > 0 && !hasReduceOne) {
+        hasReduceOne = true
+      } else {
+        hasReduceOne = false
+      }
+
+      const startMin = timeToMinute(start, hasReduceOne)
       const endMin = timeToMinute(end)
       minutes = minutes.concat(getMinutes(startMin, endMin))
     }
 
     return minutes
-  },
-
-  /**
-   * 获取价格等分, 按 0.01 拆分
-   */
-  getTradingPrices: (yLabels: Array<string | number> = []) => {
-    if (yLabels.length === 0) return []
-    const numericLabels = yLabels
-      .map((label: string | number) => (typeof label === 'string' ? parseFloat(label) : label))
-      .filter(n => !isNaN(n)) // 过滤非法数字
-
-    if (numericLabels.length === 0) return []
-    const minPrice = Math.min(...numericLabels)
-    const maxPrice = Math.max(...numericLabels)
-
-    const range = maxPrice - minPrice
-    if (range <= 0) return [minPrice]
-
-    const count = yLabels.length
-    if (count === 1 || minPrice === maxPrice) return [Number(minPrice.toFixed(4))]
-
-    const step = (maxPrice - minPrice) / (count - 1)
-    const labels: number[] = []
-
-    for (let i = 0; i < count; i++) {
-      labels.push(Number((minPrice + i * step).toFixed(4)))
-    }
-
-    return labels
   },
 
   /**
@@ -117,10 +96,14 @@ const Utils = {
     lines: number = 0,
     props: IAxisProps,
     maxPrice: number = 0,
-    minPrice: number = 0
-  ): Array<number> => {
+    minPrice: number = 0,
+    basicData: number = 0
+  ): { [K: string]: any } => {
+    let newMaxPrice = maxPrice
+    let newMinPrice = minPrice
+
     // 不显示 y 轴
-    if (lines === 0) return []
+    if (lines === 0) return { yLabels: [], newMaxPrice, newMinPrice }
 
     const yLabels = props.yLabels || []
     if (yLabels.length > 0) {
@@ -136,37 +119,36 @@ const Utils = {
     let labels: Array<number> = []
 
     // 判断有没有基线, 以基线为准
-    /*
     basicData = basicData ?? 0
 
     if (basicData > 0) {
-      // count += 1 // 需要算上 `基线`
-
       // 1. 如果大于 maxPrice, 则取 maxPrice
       if (basicData > maxPrice) {
-        basicData = maxPrice
+        newMaxPrice = basicData + (basicData - minPrice)
       }
 
       // 2. 如果小于 minPrice, 则取 minPrice
       if (basicData < minPrice) {
-        basicData = minPrice
+        newMinPrice = basicData - (minPrice - basicData)
+        if (newMinPrice < 0) {
+          newMinPrice = 0
+        }
       }
     }
-     */
 
     // 等分
-    labels.push(parseFloat(minPrice.toFixed(2))) // 最小价格线
+    labels.push(parseFloat(newMinPrice.toFixed(2))) // 最小价格线
     const newLines = lines - 2 // 减去最小价格线和最大价格线
     if (newLines <= 0) {
-      if (minPrice !== maxPrice) {
-        labels.push(parseFloat(maxPrice.toFixed(2))) // 最大价格线
+      if (minPrice !== newMaxPrice) {
+        labels.push(parseFloat(newMaxPrice.toFixed(2))) // 最大价格线
       }
       return labels
     }
 
-    const equalRange = parseFloat(((maxPrice - minPrice) / (newLines + 1)).toFixed(2))
+    const equalRange = parseFloat(((newMaxPrice - newMinPrice) / (newLines + 1)).toFixed(2))
     for (let i = 1; i <= newLines; i++) {
-      labels.push(parseFloat((minPrice + equalRange * i).toFixed(2)))
+      labels.push(parseFloat((newMinPrice + equalRange * i).toFixed(2)))
     }
 
     // 插入基线
@@ -179,8 +161,8 @@ const Utils = {
     }
      */
 
-    labels.push(parseFloat(maxPrice.toFixed(2))) // 最大价格线
-    return labels
+    labels.push(parseFloat(newMaxPrice.toFixed(2))) // 最大价格线
+    return { yLabels: labels, newMaxPrice, newMinPrice }
   },
 
   /**
@@ -263,7 +245,7 @@ const Utils = {
     yLabels: Array<number> = [],
     maxPrice: number,
     highest: ITimeHighestProps,
-    basic: ITimeHighestProps
+    basic: { [K: string]: any }
   ) => {
     let points: Array<{ [K: string]: any }> = []
 
@@ -281,8 +263,8 @@ const Utils = {
     for (let i = 0; i < yLabels.length; i++) {
       const y = height - i * yStep
       const label = yLabels[i]
-      const textWidth = Utils.onMeasureTextWidth(`${label}`, fontSize, fontFamily)
-      const textOffsetX = isYLeft ? textWidth + AxisTextOffset : -textWidth - AxisTextOffset
+      const textWidth = Utils.onMeasureTextWidth(`${label.toFixed(2)}`, fontSize, fontFamily)
+      const textOffsetX = isYLeft ? textWidth + AxisTextOffset : -textWidth
 
       // 判断是不是最高线
       let isHighest = false

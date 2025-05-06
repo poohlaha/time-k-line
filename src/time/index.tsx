@@ -8,6 +8,7 @@ import Grid from './lib/grid'
 import Axis from './lib/axis'
 import {
   AxisDefaultProps,
+  AxisTextOffset,
   DEFAULT_FONT_FAMILY,
   DEFAULT_FONT_SIZE,
   DefaultCrossProps,
@@ -17,9 +18,11 @@ import {
   ITimeGridProps,
   ITimeHighestProps,
   ITimeProps,
+  IVolumeProps,
   LineType,
   TimeDefaultProps,
-  TRADE_TIMES
+  TRADE_TIMES,
+  VolumeDefaultProps
 } from '../types/time'
 import Highest from './lib/highest'
 import Tooltip from '../components/tooltip'
@@ -27,6 +30,7 @@ import Cross from './lib/cross'
 import dayjs from 'dayjs'
 import Utils from '../utils'
 import { ITimeKTooltipProps, TooltipDefaultDataProps } from '../types/component'
+import Volume from './volume'
 
 const Timer: React.FC<ITimeProps> = (props: ITimeProps): ReactElement => {
   const [tooltipProps, setTooltipProps] = useState({ show: false, x: 0, y: 0, data: [] })
@@ -114,39 +118,94 @@ const Timer: React.FC<ITimeProps> = (props: ITimeProps): ReactElement => {
     let minPrice = 0
     let maxPrice = 0
     let prices: number[] = []
+    let volumes: number[] = []
 
     if (data.length > 0) {
       prices = data.map(d => d[1])
+      volumes = data.map(d => d[2])
       minPrice = Math.min(...prices)
       maxPrice = Math.max(...prices)
     }
 
-    return { prices, minPrice, maxPrice }
+    return { prices, minPrice, maxPrice, volumes, data }
   }
 
   /**
    * 折线图
    */
-  const getLine = (height: number, tradeMinutes: Array<number> = [], yLabels: Array<number> = []) => {
+  const getLine = (
+    height: number,
+    tradeMinutes: Array<number> = [],
+    yLabels: Array<number> = [],
+    volume: { [K: string]: any } = {}
+  ) => {
     const data = props.data || []
     if (data.length === 0) return null
 
     const width = props.width
-    const lineColor = props.lineColor ?? TimeDefaultProps.lineColor
+    const closingPrice = props.closingPrice ?? 0
 
-    const points = data
-      .map((d, _) => {
-        const index = Utils.getTimeIndexByMinute(d[0], tradeMinutes)
-        if (index === -1) return null
+    let lineColor = TimeDefaultProps.defaultColor
+    if (closingPrice === 0) {
+      const points = data
+        .map((d, _) => {
+          const price = d[1]
+          const index = Utils.getTimeIndexByMinute(d[0], tradeMinutes)
+          if (index === -1) return null
 
-        const x = (index / tradeMinutes.length) * width
-        const y = getYPositionPoint(d[1], yLabels, height) ?? 0
-        return `${x},${y}`
-      })
-      .filter(Boolean)
-      .join(' ')
+          const x = (index / tradeMinutes.length) * width
+          const y = getYPositionPoint(price, yLabels, height) ?? 0
 
-    return <polyline fill="none" stroke={lineColor} strokeWidth={1} points={points} />
+          return `${x},${y}`
+        })
+        .filter(Boolean)
+        .join(' ')
+
+      return (
+        <svg width={props.width} height={height}>
+          <polyline fill="none" stroke={lineColor} strokeWidth={1} points={points} />
+        </svg>
+      )
+    }
+
+    let lines = []
+    for (let i = 1; i < data.length; i++) {
+      const [prevTime, prevPrice] = data[i - 1]
+      const [currTime, currPrice] = data[i]
+
+      const prevIndex = Utils.getTimeIndexByMinute(prevTime, tradeMinutes)
+      const currIndex = Utils.getTimeIndexByMinute(currTime, tradeMinutes)
+
+      if (prevIndex === -1 || currIndex === -1) continue
+
+      const x1 = (prevIndex / tradeMinutes.length) * width
+      const x2 = (currIndex / tradeMinutes.length) * width
+      const y1 = getYPositionPoint(prevPrice, yLabels, height) ?? 0
+      const y2 = getYPositionPoint(currPrice, yLabels, height) ?? 0
+
+      // 计算颜色
+      let lineColor = TimeDefaultProps.defaultColor
+      if (closingPrice > 0) {
+        lineColor = currPrice >= closingPrice ? volume.riseColor || '' : volume.fallColor || ''
+      }
+
+      lines.push(<line key={i} x1={x1} y1={y1} x2={x2} y2={y2} stroke={lineColor} strokeWidth={1} />)
+    }
+
+    return (
+      <svg width={props.width} height={height}>
+        {lines}
+      </svg>
+    )
+  }
+
+  const getBasicShow = () => {
+    const basic = props.basic
+    if (basic === undefined) {
+      return false
+    }
+
+    return basic.show!
   }
 
   /**
@@ -261,14 +320,6 @@ const Timer: React.FC<ITimeProps> = (props: ITimeProps): ReactElement => {
     let max = yLabels[yLabels.length - 1]
     if (value < min || value > max) return null
 
-    if (value === min) {
-      return min
-    }
-
-    if (value === max) {
-      return min
-    }
-
     const percent = (max - value) / (max - min)
     return Number((percent * height).toFixed(2))
   }
@@ -288,7 +339,7 @@ const Timer: React.FC<ITimeProps> = (props: ITimeProps): ReactElement => {
   /**
    * 获取十字准线属性
    */
-  const getCrossProps = (width: number, height: number) => {
+  const getCrossProps = (width: number, height: number, volume: IVolumeProps) => {
     const crossProps = props.cross || {}
     const show = crossProps.show ?? true
     if (!show) {
@@ -304,7 +355,7 @@ const Timer: React.FC<ITimeProps> = (props: ITimeProps): ReactElement => {
       color,
       lineType,
       width,
-      height
+      height: volume.show ? props.height : height
     } as ITimeCrossProps
   }
 
@@ -323,22 +374,17 @@ const Timer: React.FC<ITimeProps> = (props: ITimeProps): ReactElement => {
     cross: ITimeCrossProps,
     toolTip: ITimeKTooltipProps,
     yLabels: Array<number>,
-    height: number
+    height: number,
+    volume: { [K: string]: any }
   ) => {
     const rect = e.currentTarget.getBoundingClientRect()
     const mouseX = e.clientX - rect.left
     let mouseY = e.clientY - rect.top
-    const { axisPadding } = getAxisProps()
-
     if (mouseX < 0) {
       return
     }
 
     // 如果在 X 轴 坐标下面, 则不显示
-    if (props.height - mouseY < axisPadding) {
-      return
-    }
-
     const totalMinutes = tradeMinutes.length
 
     // 鼠标占总宽度的百分比
@@ -371,7 +417,7 @@ const Timer: React.FC<ITimeProps> = (props: ITimeProps): ReactElement => {
     setFocusPoint({ x: mouseX > fixedMouseX ? fixedMouseX : mouseX, y: positionY })
 
     let tooltipData: any = []
-
+    const closingPrice = props.closingPrice ?? 0
     for (let i = 0; i < data.length; i++) {
       const d = data[i]
       let label = ''
@@ -402,6 +448,26 @@ const Timer: React.FC<ITimeProps> = (props: ITimeProps): ReactElement => {
         label,
         value
       })
+
+      // 添加在价格后面
+      if (i === 1) {
+        // 计算涨跌额| 涨跌幅
+        if (closingPrice > 0) {
+          const price = data[i] - closingPrice
+          const priceFD = (price / closingPrice) * 100
+          tooltipData.push({
+            label: '涨跌额',
+            value: `${price > 0 ? '+' : ''}${price.toFixed(2)}`,
+            color: price > 0 ? volume.riseColor : price === 0 ? '' : volume.fallColor
+          })
+
+          tooltipData.push({
+            label: '涨跌幅',
+            value: `${priceFD > 0 ? '+' : ''}${priceFD.toFixed(2)}%`,
+            color: priceFD > 0 ? volume.riseColor : price === 0 ? '' : volume.fallColor
+          })
+        }
+      }
     }
 
     if (toolTip.show) {
@@ -447,18 +513,27 @@ const Timer: React.FC<ITimeProps> = (props: ITimeProps): ReactElement => {
    */
   const onCalculateXYPoints = () => {
     const axis = getAxisProps()
-    const { maxPrice, minPrice } = getPriceRange()
+    const { maxPrice, minPrice, prices, volumes, data } = getPriceRange()
+    const volume = getVolumeProps()
 
     const width = props.width
-    const height = props.height - axis.axisPadding
+    const height = props.height - axis.axisPadding - (volume.show ? volume.height || 0 : 0)
     const fontSize = props.fontSize ?? DEFAULT_FONT_SIZE
     const fontFamily = props.fontFamily ?? DEFAULT_FONT_FAMILY
 
     const tooltip = getTooltipProp()
-    const cross = getCrossProps(width, height)
+    const cross = getCrossProps(width, height, volume)
     const tradeMinutes = getTradeMinutes() // 总时长
     const grid = getGridProps()
-    const yLabels = Utils.onCalculateYLabels(grid.horizontalLines, props.axis, maxPrice, minPrice) || []
+    const basicShow = getBasicShow()
+    const { yLabels, newMaxPrice, newMinPrice } =
+      Utils.onCalculateYLabels(
+        grid.horizontalLines,
+        props.axis,
+        maxPrice,
+        minPrice,
+        basicShow ? props.basic?.data : 0
+      ) || []
 
     const highest = getHighestProps(width, height, maxPrice, fontSize, fontFamily, axis.isYLeft, yLabels)
     const basic = getBasicProps(width, height, fontSize, fontFamily, axis.isYLeft, yLabels)
@@ -488,6 +563,8 @@ const Timer: React.FC<ITimeProps> = (props: ITimeProps): ReactElement => {
       ...axis,
       maxPrice,
       minPrice,
+      newMaxPrice,
+      newMinPrice,
       tradeMinutes,
       xPoints,
       yPoints,
@@ -502,7 +579,11 @@ const Timer: React.FC<ITimeProps> = (props: ITimeProps): ReactElement => {
       fontSize,
       fontFamily,
       cross,
-      tooltip
+      tooltip,
+      volume,
+      prices,
+      volumes,
+      data
     }
   }
 
@@ -517,6 +598,89 @@ const Timer: React.FC<ITimeProps> = (props: ITimeProps): ReactElement => {
         data={tooltipProps.data || []}
         show={tooltipProps.show}
       />
+    )
+  }
+
+  /**
+   * 获取成交量柱状图属性
+   */
+  const getVolumeProps = () => {
+    const volume = props.volume || {}
+    if (volume.show === false) {
+      return {
+        show: false
+      }
+    }
+
+    const riseColor = Utils.isBlank(props.riseColor || '') ? TimeDefaultProps.riseColor : props.riseColor || ''
+    const fallColor = Utils.isBlank(props.fallColor || '') ? TimeDefaultProps.fallColor : props.fallColor || ''
+    const height = volume.height ?? VolumeDefaultProps.height
+    return {
+      show: true,
+      riseColor,
+      fallColor,
+      height
+    }
+  }
+
+  /**
+   * 成交量柱状图
+   */
+  const getVolumeBars = (
+    volumeProps: { [K: string]: any },
+    data: Array<number[]> = [],
+    fontSize: number,
+    fontFamily: string,
+    tradeMinutes: Array<number> = []
+  ) => {
+    if (!volumeProps.show) return null
+
+    let totalCount = 0
+    if (data.length > 0) {
+      let results = data[data.length - 1]
+      if (results.length > 0) {
+        totalCount = results[2]
+      }
+    }
+
+    const maxVolume = Math.max(...data.map(d => d[2]))
+    const volumeHeight = volumeProps.height ?? VolumeDefaultProps.height
+    return (
+      <svg width={props.width} height={props.height}>
+        <text
+          x={AxisTextOffset}
+          y={props.height - volumeHeight + AxisTextOffset}
+          fill={volumeProps.textColor}
+          textAnchor="start"
+          fontSize={fontSize}
+          fontFamily={fontFamily}
+        >
+          成交量{Utils.formatNumberUnit(totalCount)}手
+        </text>
+
+        {data.length > 0 &&
+          data.map((item, index: number) => {
+            const [time, price, volume] = item
+            const prevPrice = index > 0 ? data[index - 1][1] : price
+            const color = price >= prevPrice ? volumeProps.riseColor || '' : volumeProps.fallColor || ''
+            const barWidth = props.width / tradeMinutes.length
+            const barHeight = (volume / maxVolume) * volumeHeight
+            const timeIndex = Utils.getTimeIndexByMinute(time, tradeMinutes)
+            if (timeIndex === -1) return null
+
+            const x = timeIndex * barWidth
+            return (
+              <Volume
+                key={index}
+                x={x}
+                y={props.height - barHeight}
+                width={barWidth}
+                height={barHeight}
+                color={color}
+              ></Volume>
+            )
+          })}
+      </svg>
     )
   }
 
@@ -539,7 +703,11 @@ const Timer: React.FC<ITimeProps> = (props: ITimeProps): ReactElement => {
       tradeMinutes,
       yLabels,
       cross,
-      tooltip
+      tooltip,
+      volume,
+      data,
+      fontSize,
+      fontFamily
     } = onCalculateXYPoints()
     return (
       <div className="timer-page flex-center wh100 relative">
@@ -547,7 +715,7 @@ const Timer: React.FC<ITimeProps> = (props: ITimeProps): ReactElement => {
         <svg
           width={props.width}
           height={props.height}
-          onMouseMove={e => onMouseMove(e, tradeMinutes, cross, tooltip, yLabels, height)}
+          onMouseMove={e => onMouseMove(e, tradeMinutes, cross, tooltip, yLabels, height, volume)}
           onMouseLeave={onMouseLeave}
         >
           {/* 背景网格 */}
@@ -569,7 +737,7 @@ const Timer: React.FC<ITimeProps> = (props: ITimeProps): ReactElement => {
           />
 
           {/* 折线图 */}
-          {getLine(height, tradeMinutes, yLabels)}
+          {getLine(height, tradeMinutes, yLabels, volume)}
 
           {/* 折线图圆点 */}
           {focusPoint && (
@@ -590,6 +758,9 @@ const Timer: React.FC<ITimeProps> = (props: ITimeProps): ReactElement => {
 
           {/* 十字准线 */}
           {getCross(cross)}
+
+          {/* 成交量柱状图 */}
+          {getVolumeBars(volume, data, fontSize, fontFamily, tradeMinutes)}
         </svg>
 
         {/* ToolTip */}

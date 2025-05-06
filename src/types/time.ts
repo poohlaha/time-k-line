@@ -22,7 +22,9 @@ export interface ITimeProps {
   grid?: IGridProps // 网格背景
   axis: IAxisProps // 坐标轴
   data: Array<Array<number>> // 数据
-  lineColor?: string // 折线图颜色
+  riseColor?: string // 涨颜色
+  fallColor?: string // 跌颜色
+  closingPrice: number // 昨日收盘价
   highest?: IHighestProps // 最高线
   fontSize?: number // 字体大小
   fontFamily?: string
@@ -30,10 +32,13 @@ export interface ITimeProps {
   tradeTimes?: Array<string> // 交易时间段, 如要更改, 请同时更改 xLabels 的值
   basic?: IBasicProps // 基线
   tooltip?: ITooltipProps
+  volume?: IVolumeProps
 }
 
 export const TimeDefaultProps = {
-  lineColor: '#037B66'
+  riseColor: '#f44336',
+  fallColor: '#037B66',
+  defaultColor: '#6b89f2'
 }
 
 export type LineType = 'solid' | 'dashed'
@@ -43,6 +48,28 @@ export const TRADE_TIMES = ['9:30~11:30', '13:00~15:00']
 
 export const DEFAULT_FONT_SIZE = 12 // 默认字体大小
 export const DEFAULT_FONT_FAMILY = 'Arial' // 默认字体
+
+// 成交量柱状图
+export interface IVolumeProps {
+  show?: boolean
+  textColor?: string // 文字颜色
+  height?: number
+}
+
+export interface ITimeVolumeProps extends IVolumeProps {
+  x: number
+  y: number
+  width: number
+  height: number
+  color: string
+}
+
+// 默认的成交量柱状图
+export const VolumeDefaultProps = {
+  show: true,
+  textColor: '#3D404D',
+  height: 30
+}
 
 // 网格背景属性
 export interface IGridProps {
