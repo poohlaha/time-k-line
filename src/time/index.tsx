@@ -34,7 +34,7 @@ import Volume from './volume'
 
 const Timer: React.FC<ITimeProps> = (props: ITimeProps): ReactElement => {
   const [tooltipProps, setTooltipProps] = useState({ show: false, x: 0, y: 0, data: [] })
-  const [crossProps, setCrossProps] = useState({ show: false, x: 0, y: 0, index: 0 })
+  const [crossProps, setCrossProps] = useState({ show: false, x: 0, y: 0, index: 0, yLeftLabel: '', yRightLabel: '' })
   const [focusPoint, setFocusPoint] = useState<{ x: number; y: number } | null>(null) // 圆点
 
   /**
@@ -325,6 +325,23 @@ const Timer: React.FC<ITimeProps> = (props: ITimeProps): ReactElement => {
   }
 
   /**
+   * 根据坐标点计算价格
+   */
+  const getPriceByYPosition = (y: number, yLabels: Array<number>, height: number): number | null => {
+    if (yLabels.length === 0 || height <= 0) return null
+
+    const min = yLabels[0]
+    const max = yLabels[yLabels.length - 1]
+
+    if (y < 0 || y > height) return null
+
+    const percent = y / height
+    const price = max - percent * (max - min)
+
+    return Number(price.toFixed(2))
+  }
+
+  /**
    * 最高线
    */
   const getHighest = (highest: ITimeHighestProps, hasHighest: boolean) => {
@@ -339,8 +356,8 @@ const Timer: React.FC<ITimeProps> = (props: ITimeProps): ReactElement => {
   /**
    * 获取十字准线属性
    */
-  const getCrossProps = (width: number, height: number, volume: IVolumeProps) => {
-    const crossProps = props.cross || {}
+  const getCrossProps = (width: number, height: number, volume: IVolumeProps, fontSize: number, fontFamily: string) => {
+    const crossProps: {[K: string]: any} = props.cross || {}
     const show = crossProps.show ?? true
     if (!show) {
       return {
@@ -348,14 +365,20 @@ const Timer: React.FC<ITimeProps> = (props: ITimeProps): ReactElement => {
       } as ITimeCrossProps
     }
 
-    const color = crossProps.color ?? DefaultCrossProps.color
+    const color = Utils.isBlank(crossProps.color || '') ? DefaultCrossProps.color : crossProps.color || ''
+    const textColor = Utils.isBlank(crossProps.textColor || '') ? DefaultCrossProps.textColor : crossProps.textColor || ''
+    const textBackgroundColor = Utils.isBlank(crossProps.textBackgroundColor || '') ? DefaultCrossProps.textBackgroundColor : crossProps.textBackgroundColor || ''
     const lineType = crossProps.lineType ?? (DefaultCrossProps.lineType as LineType)
     return {
       show: true,
       color,
+      textColor,
       lineType,
       width,
-      height: volume.show ? props.height : height
+      height: volume.show ? props.height : height,
+      fontSize,
+      fontFamily,
+      textBackgroundColor
     } as ITimeCrossProps
   }
 
@@ -365,7 +388,7 @@ const Timer: React.FC<ITimeProps> = (props: ITimeProps): ReactElement => {
   const getCross = (cross: ITimeCrossProps) => {
     if (!cross.show) return null
 
-    return <Cross {...cross} x={crossProps.x} y={crossProps.y} show={crossProps.show} />
+    return <Cross {...cross} x={crossProps.x} y={crossProps.y} show={crossProps.show} yLeftLabel={crossProps.yLeftLabel} yRightLabel={crossProps.yRightLabel} />
   }
 
   const onMouseMove = (
@@ -404,9 +427,6 @@ const Timer: React.FC<ITimeProps> = (props: ITimeProps): ReactElement => {
     if (dataIndex === -1) return
 
     const clampedIndex = Math.max(0, Math.min(dataIndex, props.data.length - 1))
-    if (cross.show) {
-      setCrossProps({ show: true, x: fixedMouseX, y: mouseY, index: clampedIndex })
-    }
 
     const data = props.data[clampedIndex] || []
     // console.log('data', data, index)
@@ -415,6 +435,12 @@ const Timer: React.FC<ITimeProps> = (props: ITimeProps): ReactElement => {
     // 计算圆点位置
     const positionY = getYPositionPoint(data[1], yLabels, height) ?? 0
     setFocusPoint({ x: mouseX > fixedMouseX ? fixedMouseX : mouseX, y: positionY })
+
+    if (cross.show) {
+      const yPoint = getPriceByYPosition(mouseY, yLabels, height)
+      const yLeftLabel = yPoint === null ? '' : `${yPoint.toFixed(2)}`
+      setCrossProps({ show: true, x: fixedMouseX, y: mouseY, index: clampedIndex, yLeftLabel, yRightLabel: '' })
+    }
 
     let tooltipData: any = []
     const closingPrice = props.closingPrice ?? 0
@@ -481,7 +507,7 @@ const Timer: React.FC<ITimeProps> = (props: ITimeProps): ReactElement => {
   }
 
   const onMouseLeave = () => {
-    setCrossProps({ show: false, x: 0, y: 0, index: 0 })
+    setCrossProps({ show: false, x: 0, y: 0, index: 0, yLeftLabel: '', yRightLabel: '' })
     setTooltipProps({ show: false, x: 0, y: 0, data: [] })
     setFocusPoint(null)
   }
@@ -522,7 +548,7 @@ const Timer: React.FC<ITimeProps> = (props: ITimeProps): ReactElement => {
     const fontFamily = props.fontFamily ?? DEFAULT_FONT_FAMILY
 
     const tooltip = getTooltipProp()
-    const cross = getCrossProps(width, height, volume)
+    const cross = getCrossProps(width, height, volume, fontSize, fontFamily)
     const tradeMinutes = getTradeMinutes() // 总时长
     const grid = getGridProps()
     const basicShow = getBasicShow()

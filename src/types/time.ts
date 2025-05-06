@@ -173,6 +173,8 @@ export const HighestDefaultProps = {
 export interface ICrossProps {
   show?: boolean
   color?: string
+  textColor?: string
+  textBackgroundColor?: string
   lineType?: LineType
 }
 
@@ -181,12 +183,18 @@ export interface ITimeCrossProps extends ICrossProps {
   y: number
   width: number
   height: number
+  yLeftLabel: string
+  yRightLabel: string
+  fontSize: number
+  fontFamily: string
 }
 
 // 十字准线默认属性
 export const DefaultCrossProps = {
   color: '#e0e0e0',
-  lineType: 'dashed'
+  lineType: 'dashed',
+  textColor: '#848691',
+  textBackgroundColor: 'rgba(132, 134, 145, 0.2)'
 }
 
 export const XOffset: number = 0 // x 轴偏移量, 第一个元素需要向右偏移, 最后一个元素需要向左偏移

@@ -151,16 +151,6 @@ const Utils = {
       labels.push(parseFloat((newMinPrice + equalRange * i).toFixed(2)))
     }
 
-    // 插入基线
-    /*
-    if (basicData > 0 && basicData > minPrice && basicData < maxPrice) {
-      const index = labels.findIndex((n: number) => n > basicData)
-      if (index !== -1) {
-        labels.splice(index, 0, basicData)
-      }
-    }
-     */
-
     labels.push(parseFloat(newMaxPrice.toFixed(2))) // 最大价格线
     return { yLabels: labels, newMaxPrice, newMinPrice }
   },
@@ -223,14 +213,22 @@ const Utils = {
   /**
    * 计算文字长度
    */
-  onMeasureTextWidth: (text: string, fontSize: number, fontFamily: string) => {
+  onMeasureTextSize: (text: string, fontSize: number, fontFamily: string) => {
     const canvas = document.createElement('canvas')
     const context = canvas.getContext('2d')
-    if (!context) return 0
+    if (!context) return { width: 0, height: 0 }
 
     context.font = `${fontSize}px ${fontFamily}`
     const metrics = context.measureText(text)
-    return metrics.width
+    // 计算高度：fallback 方式，优先用 fontBoundingBoxAscent + Descent
+    const height =
+      (metrics.fontBoundingBoxAscent && metrics.fontBoundingBoxDescent)
+        ? metrics.fontBoundingBoxAscent + metrics.fontBoundingBoxDescent
+        : fontSize // fallback: 使用 fontSize 近似
+    return {
+      width: metrics.width,
+      height
+    }
   },
 
   /**
@@ -263,8 +261,8 @@ const Utils = {
     for (let i = 0; i < yLabels.length; i++) {
       const y = height - i * yStep
       const label = yLabels[i]
-      const textWidth = Utils.onMeasureTextWidth(`${label.toFixed(2)}`, fontSize, fontFamily)
-      const textOffsetX = isYLeft ? textWidth + AxisTextOffset : -textWidth
+      const {width} = Utils.onMeasureTextSize(`${label.toFixed(2)}`, fontSize, fontFamily)
+      const textOffsetX = isYLeft ? width + AxisTextOffset : -width
 
       // 判断是不是最高线
       let isHighest = false

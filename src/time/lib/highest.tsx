@@ -18,8 +18,8 @@ const Highest: React.FC<ITimeHighestProps> = (props: ITimeHighestProps) => {
     const price = props.price
     const y = props.y
 
-    const textWidth = Utils.onMeasureTextWidth(`${price}`, props.fontSize, props.fontFamily)
-    const textX = props.isAxisLeft ? textWidth + AxisTextOffset : props.width - AxisTextOffset
+    const {width} = Utils.onMeasureTextSize(`${price}`, props.fontSize, props.fontFamily)
+    const textX = props.isAxisLeft ? width + AxisTextOffset : props.width - AxisTextOffset
     return (
       <g>
         {/* 水平线 */}
