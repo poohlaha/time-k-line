@@ -14,6 +14,7 @@ import {
   DefaultCrossProps,
   GridDefaultProps,
   HighestDefaultProps,
+  ITimeAxisProps,
   ITimeCrossProps,
   ITimeGridProps,
   ITimeHighestProps,
@@ -53,20 +54,52 @@ const Timer: React.FC<ITimeProps> = (props: ITimeProps): ReactElement => {
   /**
    * 获取坐标属性
    */
-  const getAxisProps = () => {
+  const getAxisProps = (
+    fontSize: number,
+    fontFamily: string,
+    width: number,
+    height: number,
+    axisPadding: number,
+    totalWidth: number,
+    totalHeight: number
+  ) => {
     const axis = props.axis
-    const axisPadding = axis.padding === null || axis.padding === undefined ? AxisDefaultProps.padding : axis.padding // 在 坐标轴内部画线
     const yPosition = axis.yPosition ?? AxisDefaultProps.yPosition
-    const isYRight = yPosition === 'right'
     const isYLeft = yPosition === 'left'
     let xLabels = axis.xLabels ?? AxisDefaultProps.xLabels
     if (xLabels.length === 0) {
       xLabels = AxisDefaultProps.xLabels
     }
 
-    const needXLine = axis.needXLine ?? AxisDefaultProps.needXLine
-    const needYLine = axis.needYLine ?? AxisDefaultProps.needYLine
-    return { ...axis, axisPadding, yPosition, isYRight, isYLeft, xLabels, needXLine, needYLine }
+    const lineColor = axis.lineColor ?? AxisDefaultProps.lineColor
+    const textColor = axis.textColor ?? AxisDefaultProps.textColor
+    const needXLabelLine = axis.needXLabelLine ?? AxisDefaultProps.needXLabelLine
+    const needYLabelLine = axis.needYLabelLine ?? AxisDefaultProps.needYLabelLine
+    const needAxisXLine = axis.needAxisXLine ?? AxisDefaultProps.needAxisXLine
+    const needAxisYLine = axis.needAxisYLine ?? AxisDefaultProps.needAxisYLine
+    return {
+      ...axis,
+      padding: axisPadding,
+      fontSize,
+      fontFamily,
+      lineColor,
+      textColor,
+      axisPadding,
+      yPosition,
+      isYLeft,
+      xLabels,
+      needXLabelLine,
+      needYLabelLine,
+      needAxisXLine,
+      needAxisYLine,
+      width,
+      height,
+      totalWidth,
+      totalHeight,
+      xPoints: [],
+      yPoints: [],
+      yAmplitudes: []
+    } as ITimeAxisProps
   }
 
   /**
@@ -154,7 +187,7 @@ const Timer: React.FC<ITimeProps> = (props: ITimeProps): ReactElement => {
           if (index === -1) return null
 
           const x = (index / tradeMinutes.length) * width
-          const y = getYPositionPoint(price, yLabels, height) ?? 0
+          const y = Utils.getYPositionPoint(price, yLabels, height) ?? 0
 
           return `${x},${y}`
         })
@@ -168,7 +201,7 @@ const Timer: React.FC<ITimeProps> = (props: ITimeProps): ReactElement => {
       )
     }
 
-    let lines = []
+    let lines: Array<React.ReactNode> = []
     for (let i = 1; i < data.length; i++) {
       const [prevTime, prevPrice] = data[i - 1]
       const [currTime, currPrice] = data[i]
@@ -180,8 +213,8 @@ const Timer: React.FC<ITimeProps> = (props: ITimeProps): ReactElement => {
 
       const x1 = (prevIndex / tradeMinutes.length) * width
       const x2 = (currIndex / tradeMinutes.length) * width
-      const y1 = getYPositionPoint(prevPrice, yLabels, height) ?? 0
-      const y2 = getYPositionPoint(currPrice, yLabels, height) ?? 0
+      const y1 = Utils.getYPositionPoint(prevPrice, yLabels, height) ?? 0
+      const y2 = Utils.getYPositionPoint(currPrice, yLabels, height) ?? 0
 
       // 计算颜色
       let lineColor = TimeDefaultProps.defaultColor
@@ -217,7 +250,8 @@ const Timer: React.FC<ITimeProps> = (props: ITimeProps): ReactElement => {
     fontSize: number,
     fontFamily: string,
     isYLeft: boolean,
-    yLabels: Array<number>
+    yLabels: Array<number>,
+    closingPrice: number
   ) => {
     const basic = props.basic
     if (basic === undefined) {
@@ -236,7 +270,7 @@ const Timer: React.FC<ITimeProps> = (props: ITimeProps): ReactElement => {
     const lineColor = basic.lineColor ?? HighestDefaultProps.lineColor
     const textColor = basic.textColor ?? HighestDefaultProps.textColor
     const lineType = basic.lineType ?? HighestDefaultProps.lineType
-    const y = getYPositionPoint(basic.data, yLabels, height)
+    const y = Utils.getYPositionPoint(basic.data, yLabels, height)
 
     return {
       ...basic,
@@ -249,20 +283,27 @@ const Timer: React.FC<ITimeProps> = (props: ITimeProps): ReactElement => {
       fontSize,
       fontFamily,
       y,
-      isAxisLeft: isYLeft
+      isAxisLeft: isYLeft,
+      closingPrice,
+      className: 'time-k-basic',
+      hasHighest: false
     } as ITimeHighestProps
   }
 
   /**
    * 基线
    */
-  const getBasic = (basic: ITimeHighestProps, hasBasic: boolean) => {
-    if (hasBasic) return null
+  const getBasic = (basic: ITimeHighestProps, hasBasic: boolean, grid: ITimeGridProps) => {
+    if (hasBasic) {
+      if (grid.show) {
+        return null
+      }
+    }
 
     const show = basic.show ?? true
     if (!show) return null
 
-    return <Highest {...basic} />
+    return <Highest {...basic} hasHighest={hasBasic} />
   }
 
   /**
@@ -271,11 +312,12 @@ const Timer: React.FC<ITimeProps> = (props: ITimeProps): ReactElement => {
   const getHighestProps = (
     width: number,
     height: number,
-    maxPrice: number,
+    price: number,
     fontSize: number,
     fontFamily: string,
     isYLeft: boolean,
-    yLabels: Array<number>
+    yLabels: Array<number>,
+    closingPrice: number
   ) => {
     const highest = props.highest
     if (highest === undefined) {
@@ -294,7 +336,7 @@ const Timer: React.FC<ITimeProps> = (props: ITimeProps): ReactElement => {
     const lineColor = highest.lineColor ?? HighestDefaultProps.lineColor
     const textColor = highest.textColor ?? HighestDefaultProps.textColor
     const lineType = highest.lineType ?? HighestDefaultProps.lineType
-    const y = getYPositionPoint(maxPrice, yLabels, height)
+    const y = Utils.getYPositionPoint(price, yLabels, height)
 
     return {
       show: true,
@@ -303,61 +345,45 @@ const Timer: React.FC<ITimeProps> = (props: ITimeProps): ReactElement => {
       lineType,
       width,
       height,
-      price: maxPrice,
+      price,
       fontSize,
       fontFamily,
       y,
-      isAxisLeft: isYLeft
+      isAxisLeft: isYLeft,
+      closingPrice
     } as ITimeHighestProps
-  }
-
-  /**
-   * 计算线条位置
-   */
-  const getYPositionPoint = (value: number, yLabels: Array<number>, height: number) => {
-    if (yLabels.length === 0) return null
-    let min = yLabels[0]
-    let max = yLabels[yLabels.length - 1]
-    if (value < min || value > max) return null
-
-    const percent = (max - value) / (max - min)
-    return Number((percent * height).toFixed(2))
-  }
-
-  /**
-   * 根据坐标点计算价格
-   */
-  const getPriceByYPosition = (y: number, yLabels: Array<number>, height: number): number | null => {
-    if (yLabels.length === 0 || height <= 0) return null
-
-    const min = yLabels[0]
-    const max = yLabels[yLabels.length - 1]
-
-    if (y < 0 || y > height) return null
-
-    const percent = y / height
-    const price = max - percent * (max - min)
-
-    return Number(price.toFixed(2))
   }
 
   /**
    * 最高线
    */
-  const getHighest = (highest: ITimeHighestProps, hasHighest: boolean) => {
-    if (hasHighest) return null
+  const getHighest = (highest: ITimeHighestProps, hasHighest: boolean, grid: ITimeGridProps) => {
+    if (hasHighest) {
+      // 如果背景显示, 则不画线
+      if (grid.show) {
+        return null
+      }
+    }
 
     const show = highest.show ?? true
     if (!show) return null
 
-    return <Highest {...highest} />
+    return <Highest {...highest} hasHighest={hasHighest} />
   }
 
   /**
    * 获取十字准线属性
    */
-  const getCrossProps = (width: number, height: number, volume: IVolumeProps, fontSize: number, fontFamily: string) => {
-    const crossProps: {[K: string]: any} = props.cross || {}
+  const getCrossProps = (
+    width: number,
+    height: number,
+    volume: IVolumeProps,
+    fontSize: number,
+    fontFamily: string,
+    isAxisLeft: boolean,
+    closingPrice: number = 0
+  ) => {
+    const crossProps: { [K: string]: any } = props.cross || {}
     const show = crossProps.show ?? true
     if (!show) {
       return {
@@ -366,8 +392,12 @@ const Timer: React.FC<ITimeProps> = (props: ITimeProps): ReactElement => {
     }
 
     const color = Utils.isBlank(crossProps.color || '') ? DefaultCrossProps.color : crossProps.color || ''
-    const textColor = Utils.isBlank(crossProps.textColor || '') ? DefaultCrossProps.textColor : crossProps.textColor || ''
-    const textBackgroundColor = Utils.isBlank(crossProps.textBackgroundColor || '') ? DefaultCrossProps.textBackgroundColor : crossProps.textBackgroundColor || ''
+    const textColor = Utils.isBlank(crossProps.textColor || '')
+      ? DefaultCrossProps.textColor
+      : crossProps.textColor || ''
+    const textBackgroundColor = Utils.isBlank(crossProps.textBackgroundColor || '')
+      ? DefaultCrossProps.textBackgroundColor
+      : crossProps.textBackgroundColor || ''
     const lineType = crossProps.lineType ?? (DefaultCrossProps.lineType as LineType)
     return {
       show: true,
@@ -378,7 +408,9 @@ const Timer: React.FC<ITimeProps> = (props: ITimeProps): ReactElement => {
       height: volume.show ? props.height : height,
       fontSize,
       fontFamily,
-      textBackgroundColor
+      textBackgroundColor,
+      isAxisLeft,
+      closingPrice
     } as ITimeCrossProps
   }
 
@@ -388,7 +420,16 @@ const Timer: React.FC<ITimeProps> = (props: ITimeProps): ReactElement => {
   const getCross = (cross: ITimeCrossProps) => {
     if (!cross.show) return null
 
-    return <Cross {...cross} x={crossProps.x} y={crossProps.y} show={crossProps.show} yLeftLabel={crossProps.yLeftLabel} yRightLabel={crossProps.yRightLabel} />
+    return (
+      <Cross
+        {...cross}
+        x={crossProps.x}
+        y={crossProps.y}
+        show={crossProps.show}
+        yLeftLabel={crossProps.yLeftLabel}
+        yRightLabel={crossProps.yRightLabel}
+      />
+    )
   }
 
   const onMouseMove = (
@@ -433,13 +474,13 @@ const Timer: React.FC<ITimeProps> = (props: ITimeProps): ReactElement => {
     if (!data || data.length <= 1) return
 
     // 计算圆点位置
-    const positionY = getYPositionPoint(data[1], yLabels, height) ?? 0
+    const positionY = Utils.getYPositionPoint(data[1], yLabels, height) ?? 0
     setFocusPoint({ x: mouseX > fixedMouseX ? fixedMouseX : mouseX, y: positionY })
 
     if (cross.show) {
-      const yPoint = getPriceByYPosition(mouseY, yLabels, height)
+      const yPoint = Utils.getPriceByYPosition(mouseY, yLabels, height)
       const yLeftLabel = yPoint === null ? '' : `${yPoint.toFixed(2)}`
-      setCrossProps({ show: true, x: fixedMouseX, y: mouseY, index: clampedIndex, yLeftLabel, yRightLabel: '' })
+      setCrossProps({ show: true, x: fixedMouseX, y: mouseY, index: clampedIndex, yLeftLabel, yRightLabel: yLeftLabel })
     }
 
     let tooltipData: any = []
@@ -480,7 +521,7 @@ const Timer: React.FC<ITimeProps> = (props: ITimeProps): ReactElement => {
         // 计算涨跌额| 涨跌幅
         if (closingPrice > 0) {
           const price = data[i] - closingPrice
-          const priceFD = (price / closingPrice) * 100
+          const { riseAndFall, amplitude } = Utils.onCalculateRiseAndFall(data[i], closingPrice)
           tooltipData.push({
             label: '涨跌额',
             value: `${price > 0 ? '+' : ''}${price.toFixed(2)}`,
@@ -489,8 +530,8 @@ const Timer: React.FC<ITimeProps> = (props: ITimeProps): ReactElement => {
 
           tooltipData.push({
             label: '涨跌幅',
-            value: `${priceFD > 0 ? '+' : ''}${priceFD.toFixed(2)}%`,
-            color: priceFD > 0 ? volume.riseColor : price === 0 ? '' : volume.fallColor
+            value: amplitude,
+            color: riseAndFall > 0 ? volume.riseColor : price === 0 ? '' : volume.fallColor
           })
         }
       }
@@ -538,31 +579,44 @@ const Timer: React.FC<ITimeProps> = (props: ITimeProps): ReactElement => {
    * 计算 X 轴, Y 轴坐标点
    */
   const onCalculateXYPoints = () => {
-    const axis = getAxisProps()
-    const { maxPrice, minPrice, prices, volumes, data } = getPriceRange()
+    const fontSize = props.fontSize ?? DEFAULT_FONT_SIZE
+    const fontFamily = props.fontFamily ?? DEFAULT_FONT_FAMILY
+    const axisPadding =
+      props.axis.padding === null || props.axis.padding === undefined ? AxisDefaultProps.padding : props.axis.padding // 在 坐标轴内部画线
     const volume = getVolumeProps()
 
     const width = props.width
-    const height = props.height - axis.axisPadding - (volume.show ? volume.height || 0 : 0)
-    const fontSize = props.fontSize ?? DEFAULT_FONT_SIZE
-    const fontFamily = props.fontFamily ?? DEFAULT_FONT_FAMILY
+    const height = props.height - axisPadding - (volume.show ? volume.height || 0 : 0)
+
+    const axis = getAxisProps(fontSize, fontFamily, width, height, axisPadding, props.width, props.height)
+    const { maxPrice, minPrice, prices, volumes, data } = getPriceRange()
 
     const tooltip = getTooltipProp()
-    const cross = getCrossProps(width, height, volume, fontSize, fontFamily)
+    const cross = getCrossProps(width, height, volume, fontSize, fontFamily, axis.isYLeft, props.closingPrice ?? 0)
     const tradeMinutes = getTradeMinutes() // 总时长
     const grid = getGridProps()
     const basicShow = getBasicShow()
-    const { yLabels, newMaxPrice, newMinPrice } =
+    const { yLabels, newMaxPrice, newMinPrice, yAmplitudes } =
       Utils.onCalculateYLabels(
         grid.horizontalLines,
         props.axis,
         maxPrice,
         minPrice,
-        basicShow ? props.basic?.data : 0
+        basicShow ? props.basic?.data : 0,
+        props.closingPrice ?? 0
       ) || []
 
-    const highest = getHighestProps(width, height, maxPrice, fontSize, fontFamily, axis.isYLeft, yLabels)
-    const basic = getBasicProps(width, height, fontSize, fontFamily, axis.isYLeft, yLabels)
+    const highest = getHighestProps(
+      width,
+      height,
+      maxPrice,
+      fontSize,
+      fontFamily,
+      axis.isYLeft,
+      yLabels,
+      props.closingPrice ?? 0
+    )
+    const basic = getBasicProps(width, height, fontSize, fontFamily, axis.isYLeft, yLabels, props.closingPrice ?? 0)
 
     // const yPrices = Utils.getTradingPrices(yLabels)
     const xPoints: Array<{ [K: string]: any }> = Utils.onCalculateXPoints(
@@ -586,7 +640,7 @@ const Timer: React.FC<ITimeProps> = (props: ITimeProps): ReactElement => {
     )
 
     return {
-      ...axis,
+      axis,
       maxPrice,
       minPrice,
       newMaxPrice,
@@ -595,6 +649,7 @@ const Timer: React.FC<ITimeProps> = (props: ITimeProps): ReactElement => {
       xPoints,
       yPoints,
       yLabels,
+      yAmplitudes,
       grid,
       width,
       height,
@@ -672,7 +727,7 @@ const Timer: React.FC<ITimeProps> = (props: ITimeProps): ReactElement => {
     const maxVolume = Math.max(...data.map(d => d[2]))
     const volumeHeight = volumeProps.height ?? VolumeDefaultProps.height
     return (
-      <svg width={props.width} height={props.height}>
+      <svg width={props.width} height={props.height} className="time-k-volume">
         <text
           x={AxisTextOffset}
           y={props.height - volumeHeight + AxisTextOffset}
@@ -703,7 +758,7 @@ const Timer: React.FC<ITimeProps> = (props: ITimeProps): ReactElement => {
                 width={barWidth}
                 height={barHeight}
                 color={color}
-              ></Volume>
+              />
             )
           })}
       </svg>
@@ -712,16 +767,13 @@ const Timer: React.FC<ITimeProps> = (props: ITimeProps): ReactElement => {
 
   const render = () => {
     const {
-      needXLine,
-      needYLine,
-      maxPrice,
-      minPrice,
+      yAmplitudes,
       xPoints,
       yPoints,
       width,
       height,
       grid,
-      isYLeft,
+      axis,
       highest,
       hasHighest,
       basic,
@@ -736,7 +788,13 @@ const Timer: React.FC<ITimeProps> = (props: ITimeProps): ReactElement => {
       fontFamily
     } = onCalculateXYPoints()
     return (
-      <div className="timer-page flex-center wh100 relative">
+      <div
+        className={`time-k-line flex-center wh100 relative ${props.className || ''}`}
+        style={{
+          width: props.width,
+          height: props.height
+        }}
+      >
         {/* 背景: 网格和坐标轴 */}
         <svg
           width={props.width}
@@ -745,22 +803,10 @@ const Timer: React.FC<ITimeProps> = (props: ITimeProps): ReactElement => {
           onMouseLeave={onMouseLeave}
         >
           {/* 背景网格 */}
-          {getGrid(width, height, grid, xPoints, yPoints, isYLeft)}
+          {getGrid(width, height, grid, xPoints, yPoints, axis.isYLeft)}
 
           {/* x 轴和 y 轴 */}
-          <Axis
-            width={width}
-            height={height}
-            maxPrice={maxPrice}
-            minPrice={minPrice}
-            xPoints={xPoints}
-            yPoints={yPoints}
-            isYLeft={isYLeft}
-            needXLine={needXLine}
-            needYLine={needYLine}
-            totalWidth={props.width}
-            totalHeight={props.height}
-          />
+          <Axis {...axis} xPoints={xPoints} yPoints={yPoints} yAmplitudes={yAmplitudes} />
 
           {/* 折线图 */}
           {getLine(height, tradeMinutes, yLabels, volume)}
@@ -777,10 +823,10 @@ const Timer: React.FC<ITimeProps> = (props: ITimeProps): ReactElement => {
           )}
 
           {/* 最高线 */}
-          {getHighest(highest, hasHighest)}
+          {getHighest(highest, hasHighest, grid)}
 
           {/* 基线 */}
-          {getBasic(basic, hasBasic)}
+          {getBasic(basic, hasBasic, grid)}
 
           {/* 十字准线 */}
           {getCross(cross)}

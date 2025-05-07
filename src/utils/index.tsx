@@ -59,11 +59,11 @@ const Utils = {
       const time = tradTimes[i]
       let [start, end] = ['', '']
       if (time.indexOf('~') !== -1) {
-        [start, end] = time.split('~') || []
+        ;[start, end] = time.split('~') || []
       } else if (time.indexOf('-') !== -1) {
-        [start, end] = time.split('-') || []
+        ;[start, end] = time.split('-') || []
       } else {
-        [start, end] = [time, time]
+        ;[start, end] = [time, time]
       }
 
       if (i > 0 && !hasReduceOne) {
@@ -90,6 +90,15 @@ const Utils = {
   },
 
   /**
+   * 计算涨跌幅和颜色
+   */
+  onCalculateRiseAndFall: (price: number, closingPrice: number) => {
+    const rf = ((price - closingPrice) / closingPrice) * 100
+    const amplitude = `${rf > 0 ? '+' : ''}${rf.toFixed(2)}%`
+    return { riseAndFall: rf, amplitude }
+  },
+
+  /**
    * 获取 Y 轴标签
    */
   onCalculateYLabels: (
@@ -97,7 +106,8 @@ const Utils = {
     props: IAxisProps,
     maxPrice: number = 0,
     minPrice: number = 0,
-    basicData: number = 0
+    basicData: number = 0,
+    closingPrice: number = 0
   ): { [K: string]: any } => {
     let newMaxPrice = maxPrice
     let newMinPrice = minPrice
@@ -152,7 +162,17 @@ const Utils = {
     }
 
     labels.push(parseFloat(newMaxPrice.toFixed(2))) // 最大价格线
-    return { yLabels: labels, newMaxPrice, newMinPrice }
+
+    // 根据 yLabels 计算另一侧的涨跌幅
+    let amplitudeList: Array<string> = []
+    if (closingPrice > 0) {
+      for (const label of labels) {
+        const { amplitude } = Utils.onCalculateRiseAndFall(label, closingPrice)
+        amplitudeList.push(amplitude)
+      }
+    }
+
+    return { yLabels: labels, newMaxPrice, newMinPrice, yAmplitudes: amplitudeList }
   },
 
   /**
@@ -213,7 +233,11 @@ const Utils = {
   /**
    * 计算文字长度
    */
-  onMeasureTextSize: (text: string, fontSize: number, fontFamily: string) => {
+  onMeasureTextSize: (text: string = '', fontSize: number, fontFamily: string) => {
+    if (Utils.isBlank(text || '')) {
+      return { width: 0, height: 0 }
+    }
+
     const canvas = document.createElement('canvas')
     const context = canvas.getContext('2d')
     if (!context) return { width: 0, height: 0 }
@@ -222,7 +246,7 @@ const Utils = {
     const metrics = context.measureText(text)
     // 计算高度：fallback 方式，优先用 fontBoundingBoxAscent + Descent
     const height =
-      (metrics.fontBoundingBoxAscent && metrics.fontBoundingBoxDescent)
+      metrics.fontBoundingBoxAscent && metrics.fontBoundingBoxDescent
         ? metrics.fontBoundingBoxAscent + metrics.fontBoundingBoxDescent
         : fontSize // fallback: 使用 fontSize 近似
     return {
@@ -251,7 +275,7 @@ const Utils = {
     const offsetX = AxisDefaultProps.lineWidthOrHeight
 
     const textAnchor = isYLeft ? 'end' : 'start'
-    const x = isYLeft ? 0 : width - AxisTextOffset
+    const x = isYLeft ? 0 : width - AxisDefaultProps.lineWidthOrHeight
 
     let hasHighest = false
     let hasBasic = false
@@ -259,10 +283,10 @@ const Utils = {
     const data = basic?.data
 
     for (let i = 0; i < yLabels.length; i++) {
-      const y = height - i * yStep
       const label = yLabels[i]
-      const {width} = Utils.onMeasureTextSize(`${label.toFixed(2)}`, fontSize, fontFamily)
-      const textOffsetX = isYLeft ? width + AxisTextOffset : -width
+      const y = Utils.getYPositionPoint(label, yLabels, height)
+      const { width } = Utils.onMeasureTextSize(`${label.toFixed(2)}`, fontSize, fontFamily)
+      const textOffsetX = isYLeft ? width + AxisTextOffset : -width - AxisTextOffset / 2
 
       // 判断是不是最高线
       let isHighest = false
@@ -282,11 +306,11 @@ const Utils = {
         }
       }
 
-      let yText = height - i * yStep - AxisTextOffset
+      let yText = height - i * yStep + AxisTextOffset
       if (i === 0) {
-        // yText -= AxisTextOffset // 第一个文字向上偏移
+        yText -= AxisTextOffset * 2 // 第一个文字向上偏移
       } else if (i === yLabels.length - 1) {
-        yText += AxisTextOffset * 2 // // 最后一个文字向下偏移
+        // yText -= AxisTextOffset // // 最后一个文字向下偏移
       }
 
       points.push({
@@ -315,6 +339,36 @@ const Utils = {
     }
 
     return { yPoints: points || [], hasHighest, hasBasic }
+  },
+
+  /**
+   * 计算线条位置
+   */
+  getYPositionPoint: (value: number, yLabels: Array<number>, height: number) => {
+    if (yLabels.length === 0) return null
+    let min = yLabels[0]
+    let max = yLabels[yLabels.length - 1]
+    if (value < min || value > max) return null
+
+    const percent = (max - value) / (max - min)
+    return Number((percent * height).toFixed(2))
+  },
+
+  /**
+   * 根据坐标点计算价格
+   */
+  getPriceByYPosition: (y: number, yLabels: Array<number>, height: number): number | null => {
+    if (yLabels.length === 0 || height <= 0) return null
+
+    const min = yLabels[0]
+    const max = yLabels[yLabels.length - 1]
+
+    if (y < 0 || y > height) return null
+
+    const percent = y / height
+    const price = max - percent * (max - min)
+
+    return Number(price.toFixed(2))
   }
 }
 

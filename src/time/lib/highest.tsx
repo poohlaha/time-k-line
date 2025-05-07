@@ -4,8 +4,15 @@
  * @author poohlaha
  */
 import React from 'react'
-import { AxisTextOffset, HighestDefaultProps, ITimeHighestProps } from '../../types/time'
-import Utils from '@pages/time-k-line/utils'
+import {
+  AxisTextOffset,
+  getLabelLeftPadding,
+  getLabelRightPadding,
+  HighestDefaultProps,
+  ITimeHighestProps
+} from '../../types/time'
+
+import Utils from '../../utils'
 
 const Highest: React.FC<ITimeHighestProps> = (props: ITimeHighestProps) => {
   const render = () => {
@@ -18,10 +25,22 @@ const Highest: React.FC<ITimeHighestProps> = (props: ITimeHighestProps) => {
     const price = props.price
     const y = props.y
 
-    const {width} = Utils.onMeasureTextSize(`${price}`, props.fontSize, props.fontFamily)
+    const label = `${price.toFixed(2)}`
+    const { width, height } = Utils.onMeasureTextSize(`${label}`, props.fontSize, props.fontFamily)
     const textX = props.isAxisLeft ? width + AxisTextOffset : props.width - AxisTextOffset
+    let amplitude = ''
+    if (props.closingPrice > 0) {
+      const fa = Utils.onCalculateRiseAndFall(price, props.closingPrice)
+      amplitude = fa.amplitude
+    }
+
+    let amplitudeWidth: number = 0
+    if (!Utils.isBlank(amplitude || '')) {
+      const amplitudeSize = Utils.onMeasureTextSize(amplitude, props.fontSize, props.fontFamily)
+      amplitudeWidth = amplitudeSize.width
+    }
     return (
-      <g>
+      <g className={`time-k-highest ${props.className || ''}`}>
         {/* 水平线 */}
         <line
           x1={0}
@@ -33,18 +52,35 @@ const Highest: React.FC<ITimeHighestProps> = (props: ITimeHighestProps) => {
           strokeWidth={1}
         />
 
-        {/* 文字标签 */}
-        <text
-          x={textX}
-          y={y - AxisTextOffset / 2}
-          fill={textColor}
-          textAnchor="end"
-          fontSize={props.fontSize}
-          fontFamily={props.fontFamily}
-          style={{ userSelect: 'none', pointerEvents: 'none' }}
-        >
-          {price.toFixed(2)}
-        </text>
+        {/* 文字标签(价格) */}
+        {!props.hasHighest && (
+          <text
+            x={textX}
+            y={y + height}
+            fill={textColor}
+            textAnchor="end"
+            fontSize={props.fontSize}
+            fontFamily={props.fontFamily}
+            style={{ userSelect: 'none', pointerEvents: 'none' }}
+          >
+            {label || ''}
+          </text>
+        )}
+
+        {/* 文字标签(百分比) */}
+        {!props.hasHighest && !Utils.isBlank(amplitude || '') && (
+          <text
+            x={props.isAxisLeft ? getLabelRightPadding(props.width) : getLabelLeftPadding(amplitudeWidth)}
+            y={y + height}
+            fill={textColor}
+            textAnchor="end"
+            fontSize={props.fontSize}
+            fontFamily={props.fontFamily}
+            style={{ userSelect: 'none', pointerEvents: 'none' }}
+          >
+            {amplitude || ''}
+          </text>
+        )}
       </g>
     )
   }

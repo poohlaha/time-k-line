@@ -4,9 +4,32 @@
  * @author poohlaha
  */
 import React, { ReactElement } from 'react'
-import { AxisDefaultProps, DEFAULT_FONT_FAMILY, DEFAULT_FONT_SIZE, ITimeAxisProps } from '../../types/time'
+import {
+  AxisDefaultProps,
+  AxisTextOffset,
+  DEFAULT_FONT_FAMILY,
+  DEFAULT_FONT_SIZE,
+  ITimeAxisProps
+} from '../../types/time'
+import Utils from '../../utils'
 
 const Axis: React.FC<ITimeAxisProps> = (props: ITimeAxisProps): ReactElement => {
+  /**
+   * 获取涨跌幅
+   */
+  const getAmplitudeValue = (index: number) => {
+    const yAmplitudes = props.yAmplitudes || []
+    if (yAmplitudes.length === 0) {
+      return ''
+    }
+
+    if (index > yAmplitudes.length - 1) {
+      return ''
+    }
+
+    return yAmplitudes[index] || ''
+  }
+
   const render = () => {
     let lineColor = props.lineColor ?? AxisDefaultProps.lineColor
     let textColor = props.textColor ?? AxisDefaultProps.textColor
@@ -19,22 +42,37 @@ const Axis: React.FC<ITimeAxisProps> = (props: ITimeAxisProps): ReactElement => 
 
     return (
       <>
-        <svg width={props.width} height={props.height}>
+        <svg width={props.width} height={props.height} className="time-k-axis-x-y-lines">
           {/* x 轴线(减去1避免覆盖 Y 轴 */}
-          <line x1={0} y1={props.height - 0.5} x2={props.width} y2={props.height - 0.5} stroke={lineColor} />
+          {props.needAxisXLine && (
+            <line x1={0} y1={props.height - 0.5} x2={props.width} y2={props.height - 0.5} stroke={lineColor} />
+          )}
 
-          {/* y 轴线(不画到底，避免与 X 轴重合) */}
-          <line
-            x1={isYLeft ? 0 : props.width}
-            y1={0}
-            x2={isYLeft ? 0 : props.width}
-            y2={props.height}
-            stroke={lineColor}
-          />
+          {/* y 轴线一侧价格线(不画到底，避免与 X 轴重合) */}
+          {props.needAxisYLine && (
+            <line
+              x1={isYLeft ? 0 : props.width}
+              y1={0}
+              x2={isYLeft ? 0 : props.width}
+              y2={props.height}
+              stroke={lineColor}
+            />
+          )}
+
+          {/* y 轴线一侧涨跌幅线(不画到底，避免与 X 轴重合) */}
+          {props.needAxisYLine && (
+            <line
+              x1={isYLeft ? props.width : 0}
+              y1={0}
+              x2={isYLeft ? props.width : 0}
+              y2={props.height}
+              stroke={lineColor}
+            />
+          )}
         </svg>
 
-        {/* y轴刻度线和文字 */}
-        <svg width={props.width} height={props.height}>
+        {/* y轴刻度线和文字(价格) */}
+        <svg width={props.width} height={props.height} className="time-k-axis-y-prices">
           {yPoints.length > 0 &&
             yPoints.map((point, i) => {
               const line = point.line || {}
@@ -57,12 +95,26 @@ const Axis: React.FC<ITimeAxisProps> = (props: ITimeAxisProps): ReactElement => 
                 newTextColor = basic.textColor
               }
 
+              const amplitude = getAmplitudeValue(i) || ''
               return (
                 <g key={`y-${i}`}>
-                  {/* 第一个不要显示刻度线 */}
-                  {needLine && props.needYLine && (
+                  {/* 第一个不要显示刻度线(价格) */}
+                  {needLine && props.needYLabelLine && (
                     <line x1={line.x1} y1={line.y1} x2={line.x2} y2={line.y2} stroke={newLineColor} />
                   )}
+
+                  {/* 第一个不要显示刻度线(涨跌幅) */}
+                  {needLine && props.needYLabelLine && (
+                    <line
+                      x1={props.isYLeft ? props.width - AxisDefaultProps.lineWidthOrHeight : 0}
+                      y1={line.y1}
+                      x2={props.isYLeft ? props.width : AxisDefaultProps.lineWidthOrHeight}
+                      y2={line.y2}
+                      stroke={newLineColor}
+                    />
+                  )}
+
+                  {/* 价格 */}
                   <text
                     x={text.x}
                     y={text.y}
@@ -74,21 +126,51 @@ const Axis: React.FC<ITimeAxisProps> = (props: ITimeAxisProps): ReactElement => 
                   >
                     {point.label || ''}
                   </text>
+
+                  {/* 涨跌幅 */}
+                  {!Utils.isBlank(amplitude || '') && (
+                    <text
+                      x={
+                        props.isYLeft
+                          ? props.width - AxisDefaultProps.lineWidthOrHeight - AxisTextOffset / 2
+                          : AxisDefaultProps.lineWidthOrHeight + AxisTextOffset / 2
+                      }
+                      y={text.y}
+                      fill={newTextColor}
+                      fontSize={fontSize}
+                      fontFamily={fontFamily}
+                      textAnchor={text.anchor}
+                      style={{ userSelect: 'none', pointerEvents: 'none' }}
+                    >
+                      {amplitude || ''}
+                    </text>
+                  )}
                 </g>
               )
             })}
         </svg>
 
+        {/* y轴刻度线和文字(比例) */}
+
         {/* x 轴刻度线和文字, 第一个和最后一个要单独处理, 防止遮挡 */}
-        <svg width={props.width} height={props.totalHeight}>
+        <svg width={props.width} height={props.totalHeight} className="time-k-axis-x-times">
           {xPoints.map((point, i: number) => {
             const line = point.line || {}
             const text = point.text || {}
-            const needLine = point.needLine
+            let needLine = point.needLine
+
+            if (needLine) {
+              // 单独处理第一个和最后一个
+              if (props.needAxisYLine) {
+                if (i === 0 || i === xPoints.length - 1) {
+                  needLine = false
+                }
+              }
+            }
 
             return (
               <g key={`x-${i}`}>
-                {needLine && props.needXLine && (
+                {needLine && props.needXLabelLine && (
                   <line x1={line.x1} y1={line.y1} x2={line.x2} y2={line.y2} stroke={lineColor} />
                 )}
                 <text

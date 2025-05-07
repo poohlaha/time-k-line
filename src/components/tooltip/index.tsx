@@ -51,7 +51,7 @@ const Tooltip: React.FC<ITimeKTooltipProps> = (props: PropsWithChildren<ITimeKTo
     const background = props.background ?? TooltipDefaultDataProps.background
     return ReactDOM.createPortal(
       <div
-        className={`timer-tooltip ${props.className || ''} p-2 absolute w-40 rounded shadow-lg z-50`}
+        className={`time-k-tooltip ${props.className || ''} p-2 absolute w-40 rounded shadow-lg z-50`}
         style={{ left: point.x, top: point.y, background }}
         ref={tooltipRef}
       >

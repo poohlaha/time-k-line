@@ -4,7 +4,7 @@
  * @author poohlaha
  */
 // 定义分时图属性
-import { ITooltipProps } from '@pages/time-k-line/types/component'
+import { ITooltipProps } from './component'
 
 /**
  * data
@@ -16,6 +16,7 @@ import { ITooltipProps } from '@pages/time-k-line/types/component'
  * ]
  */
 export interface ITimeProps {
+  className?: string
   type?: 'canvas' | 'svg' // default svg
   width: number // 长度
   height: number // 宽度
@@ -24,7 +25,7 @@ export interface ITimeProps {
   data: Array<Array<number>> // 数据
   riseColor?: string // 涨颜色
   fallColor?: string // 跌颜色
-  closingPrice: number // 昨日收盘价
+  closingPrice?: number // 昨日收盘价
   highest?: IHighestProps // 最高线
   fontSize?: number // 字体大小
   fontFamily?: string
@@ -104,20 +105,21 @@ export interface IAxisProps {
   yLabels?: Array<string | number> // y 轴
   yPosition?: 'left' | 'right'
   fontSize?: number
-  padding?: number
   fontFamily?: string
-  needXLine?: boolean
-  needYLine?: boolean
+  padding?: number
+  needXLabelLine?: boolean // 是否需要 X 轴 文字短线
+  needAxisXLine?: boolean // 是否需要 X 轴横线
+  needYLabelLine?: boolean // 是否需要 Y 轴文字短线
+  needAxisYLine?: boolean // 是否需要 Y 轴坚线
 }
 
 export interface ITimeAxisProps extends IAxisProps {
   width: number // 长度
   height: number // 宽度
-  maxPrice: number
-  minPrice: number
   isYLeft: boolean
   totalWidth: number
   totalHeight: number
+  yAmplitudes: Array<string>
   xPoints: Array<{ [K: string]: any }>
   yPoints: Array<{ [K: string]: any }>
 }
@@ -129,8 +131,10 @@ export const AxisDefaultProps = {
   xLabels: ['09:30', '11:30/13:00', '15:00'],
   yPosition: 'left',
   padding: 30,
-  needXLine: true,
-  needYLine: false,
+  needXLabelLine: false,
+  needAxisXLine: true,
+  needYLabelLine: false,
+  needAxisYLine: true,
   lineWidthOrHeight: 5
 }
 
@@ -158,7 +162,10 @@ export interface ITimeHighestProps extends IHighestProps {
   fontSize: number
   fontFamily: string
   isAxisLeft: boolean
+  hasHighest: boolean
   y: number
+  closingPrice: number
+  className?: string
 }
 
 // 默认价格最高线属性
@@ -187,6 +194,8 @@ export interface ITimeCrossProps extends ICrossProps {
   yRightLabel: string
   fontSize: number
   fontFamily: string
+  isAxisLeft: boolean
+  closingPrice: number
 }
 
 // 十字准线默认属性
@@ -199,3 +208,18 @@ export const DefaultCrossProps = {
 
 export const XOffset: number = 0 // x 轴偏移量, 第一个元素需要向右偏移, 最后一个元素需要向左偏移
 export const AxisTextOffset: number = 8 // 文字偏移量, x 轴和 y 轴第一个和最后一个元素需要偏移
+
+// 标签左侧间距
+export const getLabelLeftPadding = (width: number = 0) => {
+  if (width > 0) {
+    return AxisDefaultProps.lineWidthOrHeight + AxisTextOffset / 2 + width
+  }
+
+  return AxisDefaultProps.lineWidthOrHeight + AxisTextOffset / 2
+}
+
+// 标签右侧间距
+export const getLabelRightPadding = (width: number) => {
+  if (width === 0) return 0
+  return width - AxisDefaultProps.lineWidthOrHeight - AxisTextOffset / 2
+}

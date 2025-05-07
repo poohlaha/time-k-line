@@ -18,7 +18,7 @@ const Grid: React.FC<ITimeGridProps> = (props: ITimeGridProps) => {
     const yPoints = props.yPoints || []
     const isYLeft = props.isYLeft
     return (
-      <svg width={props.width} height={props.height}>
+      <svg width={props.width} height={props.height} className="time-k-grid">
         {/* 纵向 */}
         {xPoints.map((point, i) => {
           const line = point.line || {}
@@ -68,13 +68,20 @@ const Grid: React.FC<ITimeGridProps> = (props: ITimeGridProps) => {
             newLineColor = basic.lineColor
           }
 
+          let y1 = line.y1
+          let y2 = line.y2
+          if (i === yPoints.length - 1) {
+            y1 = 0
+            y2 = 0
+          }
+
           return (
             <line
               key={`v-${i}`}
               x1={0}
-              y1={line.y1}
+              y1={y1}
               x2={props.width}
-              y2={line.y2}
+              y2={y2}
               stroke={newLineColor}
               strokeDasharray={strokeDasharray}
             />
