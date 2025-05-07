@@ -1,14 +1,19 @@
 # Time K Line
   分时图、K线图, 使用 `svg` 绘制
 
-### 使用前提
+## Prerequisites
   需要安装 `tailwindcss`, 请查看官方文档。
 
-### 分时图
+## Preview
+  ![](./screenshots/分时图.jpeg)
+
+## Usage
+
+- 分时图
 
 examples:
 
-```javascript
+```tsx
 <TimeLine
     className="bg-gray-100 rounded"
     width={650}
