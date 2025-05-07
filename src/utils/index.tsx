@@ -3,7 +3,8 @@
  * @date 2023-08-28
  * @author poohlaha
  */
-import { AxisDefaultProps, AxisTextOffset, IAxisProps, ITimeHighestProps, XOffset } from '../types/time'
+import { ITimeHighestProps } from '../types/component'
+import { AxisDefaultProps, AxisTextOffset, IAxisProps, XOffset } from '../types/component'
 
 const Utils = {
   /**
@@ -59,11 +60,11 @@ const Utils = {
       const time = tradTimes[i]
       let [start, end] = ['', '']
       if (time.indexOf('~') !== -1) {
-        ;[start, end] = time.split('~') || []
+        [start, end] = time.split('~') || []
       } else if (time.indexOf('-') !== -1) {
-        ;[start, end] = time.split('-') || []
+        [start, end] = time.split('-') || []
       } else {
-        ;[start, end] = [time, time]
+        [start, end] = [time, time]
       }
 
       if (i > 0 && !hasReduceOne) {

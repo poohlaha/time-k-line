@@ -4,5 +4,6 @@
  * @author poohlaha
  */
 import TimeLine from './time'
+import KLine from './k'
 
-export { TimeLine }
+export { TimeLine, KLine }

@@ -4,14 +4,9 @@
  * @author poohlaha
  */
 import React, { ReactElement } from 'react'
-import {
-  AxisDefaultProps,
-  AxisTextOffset,
-  DEFAULT_FONT_FAMILY,
-  DEFAULT_FONT_SIZE,
-  ITimeAxisProps
-} from '../../types/time'
+import { DEFAULT_FONT_FAMILY, DEFAULT_FONT_SIZE } from '../../types/component'
 import Utils from '../../utils'
+import { AxisDefaultProps, AxisTextOffset, ITimeAxisProps } from '../../types/component'
 
 const Axis: React.FC<ITimeAxisProps> = (props: ITimeAxisProps): ReactElement => {
   /**
@@ -60,7 +55,7 @@ const Axis: React.FC<ITimeAxisProps> = (props: ITimeAxisProps): ReactElement => 
           )}
 
           {/* y 轴线一侧涨跌幅线(不画到底，避免与 X 轴重合) */}
-          {props.needAxisYLine && (
+          {props.needAxisYLine && (props.yAmplitudes || []).length > 0 && (
             <line
               x1={isYLeft ? props.width : 0}
               y1={0}

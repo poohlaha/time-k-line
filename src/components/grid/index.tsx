@@ -4,7 +4,7 @@
  * @author poohlaha
  */
 import React from 'react'
-import { GridDefaultProps, ITimeGridProps } from '../../types/time'
+import { GridDefaultProps, ITimeGridProps } from '../../types/component'
 
 const Grid: React.FC<ITimeGridProps> = (props: ITimeGridProps) => {
   const render = () => {

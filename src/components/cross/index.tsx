@@ -4,8 +4,9 @@
  * @author poohlaha
  */
 import React, { ReactElement } from 'react'
-import { AxisDefaultProps, DefaultCrossProps, ITimeCrossProps } from '../../types/time'
+import { DefaultCrossProps, ITimeCrossProps } from '../../types/component'
 import Utils from '../../utils'
+import { AxisDefaultProps } from '../../types/component'
 
 const Cross: React.FC<ITimeCrossProps> = (props: ITimeCrossProps): ReactElement => {
   /**
@@ -13,6 +14,10 @@ const Cross: React.FC<ITimeCrossProps> = (props: ITimeCrossProps): ReactElement 
    */
   const getLeftRightLabel = () => {
     const price = props.isAxisLeft ? props.yLeftLabel || '' : props.yRightLabel || ''
+    if (Utils.isBlank(price || '')) {
+      return null
+    }
+
     const p = parseFloat(Number(price).toFixed(2))
     const priceSize = Utils.onMeasureTextSize(`${p.toFixed(2)}`, props.fontSize, props.fontFamily)
 
@@ -44,33 +49,22 @@ const Cross: React.FC<ITimeCrossProps> = (props: ITimeCrossProps): ReactElement 
     return { leftLabel, rightLabel, leftTextWidth, rightTextWidth, leftTextHeight, rightTextHeight }
   }
 
-  const render = () => {
-    const show = props.show ?? true
-    if (!show) return <div></div>
-
-    const color = props.color ?? DefaultCrossProps.color
-    const lineType = props.lineType ?? DefaultCrossProps.lineType
-    const strokeDasharray = lineType === 'dashed' ? '4 2' : 'none'
+  const getLabelNode = () => {
     const padding = 6
+    const labelProps = getLeftRightLabel()
+    if (labelProps === null) return null
 
-    const { leftLabel, rightLabel, leftTextWidth, rightTextWidth, leftTextHeight, rightTextHeight } =
-      getLeftRightLabel()
+    const leftRectHeight = labelProps.leftTextHeight + padding
+    const rightRectHeight = labelProps.rightTextHeight + padding
 
-    const leftRectHeight = leftTextHeight + padding
-    const rightRectHeight = rightTextHeight + padding
     return (
-      <svg width={props.width} height={props.height} className="time-k-cross">
-        {/* 纵向 */}
-        <line x1={props.x} y1={0} x2={props.x} y2={props.height} stroke={color} strokeDasharray={strokeDasharray} />
-
-        {/* 横向 */}
-        <line x1={0} y1={props.y} x2={props.width} y2={props.y} stroke={color} strokeDasharray={strokeDasharray} />
-        {!Utils.isBlank(leftLabel) && (
+      <>
+        {!Utils.isBlank(labelProps.leftLabel || '') && (
           <>
             <rect
               x={AxisDefaultProps.lineWidthOrHeight}
               y={props.y - leftRectHeight / 2}
-              width={leftTextWidth + padding}
+              width={labelProps.leftTextWidth + padding}
               height={leftRectHeight}
               fill={props.textBackgroundColor}
               rx={6}
@@ -85,24 +79,24 @@ const Cross: React.FC<ITimeCrossProps> = (props: ITimeCrossProps): ReactElement 
               fontFamily={props.fontFamily}
               style={{ userSelect: 'none', pointerEvents: 'none' }}
             >
-              {leftLabel || ''}
+              {labelProps.leftLabel || ''}
             </text>
           </>
         )}
 
-        {!Utils.isBlank(rightLabel) && (
+        {!Utils.isBlank(labelProps.rightLabel || '') && (
           <>
             <rect
-              x={props.width - (rightTextWidth + AxisDefaultProps.lineWidthOrHeight + padding)}
+              x={props.width - (labelProps.rightTextWidth + AxisDefaultProps.lineWidthOrHeight + padding)}
               y={props.y - rightRectHeight / 2}
-              width={rightTextWidth + padding}
+              width={labelProps.rightTextWidth + padding}
               height={rightRectHeight}
               fill={props.textBackgroundColor}
               rx={6}
               ry={6}
             />
             <text
-              x={props.width - (rightTextWidth + padding / 2 + AxisDefaultProps.lineWidthOrHeight)}
+              x={props.width - (labelProps.rightTextWidth + padding / 2 + AxisDefaultProps.lineWidthOrHeight)}
               y={props.y + rightRectHeight / 2 - padding}
               fill={props.textColor}
               textAnchor="start"
@@ -110,10 +104,31 @@ const Cross: React.FC<ITimeCrossProps> = (props: ITimeCrossProps): ReactElement 
               fontFamily={props.fontFamily}
               style={{ userSelect: 'none', pointerEvents: 'none' }}
             >
-              {rightLabel || ''}
+              {labelProps.rightLabel || ''}
             </text>
           </>
         )}
+      </>
+    )
+  }
+
+  const render = () => {
+    const show = props.show ?? true
+    if (!show) return <div></div>
+
+    const color = props.color ?? DefaultCrossProps.color
+    const lineType = props.lineType ?? DefaultCrossProps.lineType
+    const strokeDasharray = lineType === 'dashed' ? '4 2' : 'none'
+
+    return (
+      <svg width={props.width} height={props.height} className="time-k-cross">
+        {/* 纵向 */}
+        <line x1={props.x} y1={0} x2={props.x} y2={props.height} stroke={color} strokeDasharray={strokeDasharray} />
+
+        {/* 横向 */}
+        <line x1={0} y1={props.y} x2={props.width} y2={props.y} stroke={color} strokeDasharray={strokeDasharray} />
+
+        {getLabelNode()}
       </svg>
     )
   }

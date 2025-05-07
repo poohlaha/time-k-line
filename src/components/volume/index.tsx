@@ -4,7 +4,7 @@
  * @author poohlaha
  */
 import React, { ReactElement } from 'react'
-import { ITimeVolumeProps } from '../types/time'
+import { ITimeVolumeProps } from '../../types/component'
 
 const Volume = (props: ITimeVolumeProps): ReactElement => {
   const render = () => {

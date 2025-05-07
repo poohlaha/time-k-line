@@ -4,15 +4,9 @@
  * @author poohlaha
  */
 import React from 'react'
-import {
-  AxisTextOffset,
-  getLabelLeftPadding,
-  getLabelRightPadding,
-  HighestDefaultProps,
-  ITimeHighestProps
-} from '../../types/time'
-
+import { HighestDefaultProps, ITimeHighestProps } from '../../types/component'
 import Utils from '../../utils'
+import { AxisTextOffset, getLabelLeftPadding, getLabelRightPadding } from '../../types/component'
 
 const Highest: React.FC<ITimeHighestProps> = (props: ITimeHighestProps) => {
   const render = () => {
