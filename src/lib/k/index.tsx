@@ -3,19 +3,30 @@
  * @date 2023-08-28
  * @author poohlaha
  */
-import React, { ReactElement, useRef, useState } from 'react'
+import React, { ReactElement, useEffect, useRef, useState } from 'react'
 import { IKProps } from '../../types/k'
 import { Handler, HandleCommon } from '../../utils/handler'
 import Utils from '../../utils'
 import dayjs from 'dayjs'
-import { GridDefaultProps, TimeKDefaultProps } from '../../types/default'
-import { IKDataItemProps, IShareTooltipProps, IVolumeDataItemProps } from '../../types/share'
+import { DefaultMAProps, GridDefaultProps, TimeKDefaultProps } from '../../types/default'
+import { IKDataItemProps, IKMAProps, IShareTooltipProps, IVolumeDataItemProps } from '../../types/share'
 import Tooltip from '../../components/tooltip'
 
 const KLine: React.FC<IKProps> = (props: IKProps): ReactElement => {
   const svgRef = useRef<SVGSVGElement>(null)
+  const maRef = useRef<HTMLDivElement>(null)
+
+  const [size, setSize] = useState<{ [K: string]: any }>({ width: 0, height: 0 })
   const [tooltipProps, setTooltipProps] = useState({ show: false, x: 0, y: 0, data: [] })
   const [crossProps, setCrossProps] = useState({ show: false, x: 0, y: 0, index: 0, yLeftLabel: '', yRightLabel: '' })
+
+  useEffect(() => {
+    const current = maRef.current
+    if (!current) return
+    const rect = current.getBoundingClientRect()
+    const height = props.height - rect.height
+    setSize({ width: props.width ?? 0, height: height < 0 ? 0 : height })
+  }, [maRef])
 
   /**
    * 获取价格最小值和最大值
@@ -77,7 +88,18 @@ const KLine: React.FC<IKProps> = (props: IKProps): ReactElement => {
    */
   const onCalculateXYPoints = () => {
     const { maxPrice, minPrice, volumes, data, xLabels, tradeMinutes } = getPriceRange()
-    const commonProps = Handler.getKTimeProps(props, xLabels, props.closingPrice ?? 0, maxPrice, minPrice)
+    const commonProps = Handler.getKTimeProps(
+      {
+        ...(props || {}),
+        width: size.width,
+        height: size.height
+      },
+      xLabels,
+      props.closingPrice ?? 0,
+      maxPrice,
+      minPrice,
+      false
+    )
 
     return {
       maxPrice,
@@ -255,6 +277,44 @@ const KLine: React.FC<IKProps> = (props: IKProps): ReactElement => {
   }
 
   /**
+   * 获取均线属性
+   */
+  const getMaProps = () => {
+    const ma = props.ma || {}
+    const className = ma.className || ''
+    const five = ma.five || {}
+    const ten = ma.ten || {}
+    const twenty = ma.twenty || {}
+
+    const fontClassName = Utils.isBlank(ma.fontClassName || '') ? DefaultMAProps.fontClassName : ma.fontClassName || ''
+    const fiveClassName = five.className || ''
+    const fiveColor = Utils.isBlank(five.color || '') ? DefaultMAProps.fiveColor : five.color || ''
+
+    const tenClassName = ten.className || ''
+    const tenColor = Utils.isBlank(ten.color || '') ? DefaultMAProps.tenColor : ten.color || ''
+
+    const twentyClassName = twenty.className || ''
+    const twentyColor = Utils.isBlank(twenty.color || '') ? DefaultMAProps.twentyColor : twenty.color || ''
+
+    return {
+      fontClassName,
+      className,
+      five: {
+        className: fiveClassName,
+        color: fiveColor
+      },
+      ten: {
+        className: tenClassName,
+        color: tenColor
+      },
+      twenty: {
+        className: twentyClassName,
+        color: twentyColor
+      }
+    } as IKMAProps
+  }
+
+  /**
    *  K 线图
    */
   const getKLine = (
@@ -269,7 +329,7 @@ const KLine: React.FC<IKProps> = (props: IKProps): ReactElement => {
     const flatColor = Utils.isBlank(props.flatColor || '') ? TimeKDefaultProps.flatColor : props.flatColor || ''
 
     return (
-      <svg width={props.width} height={props.height}>
+      <svg width={size.width} height={size.height}>
         {data.map((item: IKDataItemProps, index: number) => {
           const x = index * unitWidth + (unitWidth - candleWidth) / 2
           const open = item.open ?? 0
@@ -327,21 +387,102 @@ const KLine: React.FC<IKProps> = (props: IKProps): ReactElement => {
     )
   }
 
+  /**
+   * 计算均线
+   * 均线（MA，Moving Average）通常显示为一条线，但它本质是对收盘价的滑动平均。你看到三个数，可能是因为它们分别对应不同周期的均线，比如：
+   * MA5：5日均线
+   * MA10：10日均线
+   * MA20：20日均线
+   * 这三个数就是对应当天(或当前蜡烛) 计算出来的这三条均线的当前值
+   * MA5 = 当前这根 + 前4根收盘价的平均
+   * MA10 = 当前这根 + 前9根收盘价的平均
+   * MA20 = 当前这根 + 前19根收盘价的平均
+   */
+  const onCalculateMa = (data: Array<IKDataItemProps>, period: number) => {
+    // 如果数据不足一个周期，无法计算均线
+    if (data.length < period) {
+      return 0
+    }
+
+    // 取最后 period 个数据，计算收盘价的平均值
+    const recentData = data.slice(data.length - period)
+    const sum = recentData.reduce((acc, item) => acc + item.close, 0)
+    return (sum / period).toFixed(2)
+  }
+
+  /**
+   * 获取均线
+   */
+  const getMa = (commonProps: { [K: string]: any } = {}) => {
+    const ma = getMaProps()
+    const data = commonProps.data || []
+
+    const ma5 = onCalculateMa(data, 5) // 计算5日均线
+    const ma10 = onCalculateMa(data, 10) // 计算10日均线
+    const ma20 = onCalculateMa(data, 20) // 计算20日均线
+
+    return (
+      <div
+        className={`${commonProps.prefixClassName || ''}-k-ma flex pt-1.5 pb-1.5 pl-2 pr-2 relative ${ma.className || ''} ${ma.fontClassName || ''}`}
+        ref={maRef}
+      >
+        <p className={`${commonProps.prefixClassName || ''}-k-ma-title mr-2`}>均线</p>
+        <div className={`${commonProps.prefixClassName || ''}-k-ma-content flex-1 flex`}>
+          <div
+            className={`${commonProps.prefixClassName || ''}-k-ma-five flex ${ma.five?.className || ''}`}
+            style={{
+              color: ma.five?.color || ''
+            }}
+          >
+            <p>MA5</p>
+            <p className="ml-1 ma5">{ma5}</p>
+          </div>
+          <div
+            className={`${commonProps.prefixClassName || ''}-k-ma-ten flex ml-2 ${ma.ten?.className || ''}`}
+            style={{
+              color: ma.ten?.color || ''
+            }}
+          >
+            <p>MA10</p>
+            <p className="ml-1 ma10">{ma10}</p>
+          </div>
+          <div
+            className={`${commonProps.prefixClassName || ''}-k-ma-twenty flex ml-2 ${ma.twenty?.className || ''}`}
+            style={{
+              color: ma.twenty?.color || ''
+            }}
+          >
+            <p>MA20</p>
+            <p className="ml-1 ma20">{ma20}</p>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
   const render = () => {
     const commonProps = onCalculateXYPoints()
     const { unitWidth, candleWidth, scaleY } = onCalculateCandleProps(commonProps)
+    let height = size.width - commonProps.axisPadding - (commonProps.volume.show ? commonProps.volume.height || 0 : 0)
+    if (height < 0) {
+      height = 0
+    }
     return (
       <div
-        className={`${commonProps.prefixClassName || ''}-k-chart flex-center wh100 relative ${props.className || ''}`}
+        className={`${commonProps.prefixClassName || ''}-k-chart items-center justify-center wh100 relative ${props.className || ''}`}
         style={{
           width: props.width,
           height: props.height
         }}
       >
+        {/* 均线 */}
+        {getMa(commonProps)}
+
+        {/* 背景网格 | 坐标轴 ｜ 最高线 | 基线 | 十字准线 | 成交量柱状图 */}
         <svg
           className="z-10 absolute"
-          width={props.width}
-          height={props.height}
+          width={size.width}
+          height={size.height}
           ref={svgRef}
           onMouseMove={e => {
             e.preventDefault()
@@ -361,10 +502,14 @@ const KLine: React.FC<IKProps> = (props: IKProps): ReactElement => {
           onMouseLeave={onMouseLeave}
         >
           {HandleCommon.getCommon(
-            props,
+            {
+              ...(props || {}),
+              width: size.width,
+              height: size.height
+            },
             commonProps.prefixClassName,
-            commonProps.width,
-            commonProps.height,
+            size.width,
+            height,
             commonProps.grid,
             commonProps.axis,
             commonProps.highest,
@@ -380,14 +525,13 @@ const KLine: React.FC<IKProps> = (props: IKProps): ReactElement => {
             commonProps.fontSize,
             commonProps.fontFamily,
             commonProps.hasHighest,
-            commonProps.hasBasic
+            commonProps.hasBasic,
+            false
           )}
         </svg>
-        {/* 背景网格 | 坐标轴 ｜ 最高线 | 基线 | 十字准线 | 成交量柱状图 */}
-        <svg className="z-1 absolute" width={props.width} height={props.height}>
-          {/* K 线图 */}
-          {getKLine(commonProps, unitWidth, candleWidth, scaleY)}
-        </svg>
+
+        {/* K 线图 */}
+        {getKLine(commonProps, unitWidth, candleWidth, scaleY)}
 
         {/* ToolTip */}
         {getTooltip(commonProps.tooltip, commonProps.prefixClassName || '')}

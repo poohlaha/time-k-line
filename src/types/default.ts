@@ -103,3 +103,11 @@ export const DefaultShareLineProps = {
     fontClassName: 'text-sm font-serif'
   }
 }
+
+// 均线默认属性
+export const DefaultMAProps = {
+  fontClassName: 'text-xs',
+  fiveColor: '#faa90e', // 5 日
+  tenColor: '#ff6600', // 10 日
+  twentyColor: '#416df9' // 20日
+}

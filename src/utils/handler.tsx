@@ -330,7 +330,8 @@ const Handler = {
     xLabels: Array<string> = [],
     closingPrice: number = 0,
     maxPrice: number = 0,
-    minPrice: number = 0
+    minPrice: number = 0,
+    needHighest: boolean = true
   ) => {
     // 字体大小
     let fontSize = props.fontSize ?? 0
@@ -365,7 +366,10 @@ const Handler = {
     const width = props.width
 
     // height
-    const height = props.height - axisPadding - (volume.show ? volume.height || 0 : 0)
+    let height = props.height - axisPadding - (volume.show ? volume.height || 0 : 0)
+    if (height < 0) {
+      height = 0
+    }
 
     // 网格背景
     const grid = Handler.getGridProps(props)
@@ -450,7 +454,8 @@ const Handler = {
       yLabels,
       maxPrice,
       highest,
-      basic
+      basic,
+      needHighest
     )
 
     // 获取样式前缀
@@ -679,7 +684,8 @@ const HandleCommon = {
     fontSize: number = 0,
     fontFamily: string = '',
     hasHighest: boolean,
-    hasBasic: boolean
+    hasBasic: boolean,
+    needHighest: boolean = true
   ) => {
     return (
       <>
@@ -690,7 +696,7 @@ const HandleCommon = {
         {HandleCommon.getAxis(axis, xPoints, yPoints, yAmplitudes, prefixClassName || '')}
 
         {/* 最高线 */}
-        {HandleCommon.getHighest(highest, hasHighest, grid, prefixClassName || '')}
+        {needHighest && HandleCommon.getHighest(highest, hasHighest, grid, prefixClassName || '')}
 
         {/* 基线 */}
         {HandleCommon.getBasic(basic, hasBasic, grid, prefixClassName || '')}

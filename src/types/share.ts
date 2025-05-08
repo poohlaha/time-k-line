@@ -156,6 +156,7 @@ export interface IShareProps {
   basic?: IBasicProps // 基线
   highest?: IHighestProps // 最高线
   cross?: ICrossProps // 十字准线
+  ma?: IKMAProps // 均线
   tooltip?: ITooltipProps // 提示框
   volume?: IVolumeProps // 成交量
   closingPrice?: number // 昨日收盘价
@@ -164,6 +165,20 @@ export interface IShareProps {
   flatColor?: string // 持平颜色
   fontSize?: number // 字体大小
   fontFamily?: string // 字体名称
+}
+
+// 均线, 5日、10日、20日
+export interface IKMAProps {
+  className?: string
+  fontClassName?: string
+  five?: IMAProps // 5日
+  ten?: IMAProps // 10日
+  twenty?: IMAProps // 20日
+}
+
+export interface IMAProps {
+  className?: string
+  color?: string
 }
 
 // 分时图和 K 线图公共属性

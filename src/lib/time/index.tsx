@@ -322,7 +322,7 @@ const TimeLine: React.FC<ITimeProps> = (props: ITimeProps): ReactElement => {
     } = onCalculateXYPoints()
     return (
       <div
-        className={`${prefixClassName || ''}-time-chart flex-center wh100 relative ${props.className || ''}`}
+        className={`${prefixClassName || ''}-time-chart items-center justify-center wh100 relative ${props.className || ''}`}
         style={{
           width: props.width,
           height: props.height

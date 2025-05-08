@@ -61,11 +61,11 @@ const Utils = {
       const time = tradTimes[i]
       let [start, end] = ['', '']
       if (time.indexOf('~') !== -1) {
-        [start, end] = time.split('~') || []
+        ;[start, end] = time.split('~') || []
       } else if (time.indexOf('-') !== -1) {
-        [start, end] = time.split('-') || []
+        ;[start, end] = time.split('-') || []
       } else {
-        [start, end] = [time, time]
+        ;[start, end] = [time, time]
       }
 
       if (i > 0 && !hasReduceOne) {
@@ -275,7 +275,8 @@ const Utils = {
     yLabels: Array<number> = [],
     maxPrice: number,
     highest: IShareHighestProps,
-    basic: { [K: string]: any }
+    basic: { [K: string]: any },
+    needHighest: boolean = true
   ) => {
     let points: Array<{ [K: string]: any }> = []
 
@@ -302,8 +303,10 @@ const Utils = {
 
       // 最高线
       if (label === maxPrice) {
-        isHighest = true
-        hasHighest = true
+        if (needHighest) {
+          isHighest = true
+          hasHighest = true
+        }
       }
 
       // 基线
