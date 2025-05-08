@@ -4,9 +4,10 @@
  * @author poohlaha
  */
 import React from 'react'
-import { GridDefaultProps, ITimeGridProps } from '../../types/component'
+import { IShareGridProps } from '../../types/share'
+import { GridDefaultProps } from '../../types/default'
 
-const Grid: React.FC<ITimeGridProps> = (props: ITimeGridProps) => {
+const Grid: React.FC<IShareGridProps> = (props: IShareGridProps) => {
   const render = () => {
     const lineType = props.lineType ?? GridDefaultProps.lineType
     // 如果是 `dashed`, 那么画线时绘制 4 像素的实线, 然后间隔 2 像素, 依次类推....
@@ -18,7 +19,7 @@ const Grid: React.FC<ITimeGridProps> = (props: ITimeGridProps) => {
     const yPoints = props.yPoints || []
     const isYLeft = props.isYLeft
     return (
-      <svg width={props.width} height={props.height} className="time-k-grid">
+      <svg width={props.width} height={props.height} className={`${props.prefixClassName || ''}-grid`}>
         {/* 纵向 */}
         {xPoints.map((point, i) => {
           const line = point.line || {}

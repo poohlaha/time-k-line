@@ -4,11 +4,11 @@
  * @author poohlaha
  */
 import React, { ReactElement } from 'react'
-import { DefaultCrossProps, ITimeCrossProps } from '../../types/component'
+import { IShareCrossProps } from '../../types/share'
 import Utils from '../../utils'
-import { AxisDefaultProps } from '../../types/component'
+import { AxisDefaultProps, DefaultCrossProps } from '../../types/default'
 
-const Cross: React.FC<ITimeCrossProps> = (props: ITimeCrossProps): ReactElement => {
+const Cross: React.FC<IShareCrossProps> = (props: IShareCrossProps): ReactElement => {
   /**
    * 计算左边和右边显示文字
    */
@@ -24,6 +24,7 @@ const Cross: React.FC<ITimeCrossProps> = (props: ITimeCrossProps): ReactElement 
     const { amplitude } = Utils.onCalculateRiseAndFall(p, props.closingPrice) // 计算涨跌幅
     const amplitudeSize = Utils.onMeasureTextSize(amplitude, props.fontSize, props.fontFamily)
 
+    const yAmplitudes = props.yAmplitudes || []
     let leftLabel = ''
     let rightLabel = ''
     let leftTextWidth: number = 0
@@ -32,13 +33,13 @@ const Cross: React.FC<ITimeCrossProps> = (props: ITimeCrossProps): ReactElement 
     let rightTextHeight: number = 0
     if (props.isAxisLeft) {
       leftLabel = price || ''
-      rightLabel = amplitude || ''
+      rightLabel = yAmplitudes.length > 0 ? amplitude || '' : ''
       leftTextWidth = priceSize.width
       leftTextHeight = priceSize.height
       rightTextWidth = amplitudeSize.width
       rightTextHeight = amplitudeSize.height
     } else {
-      leftLabel = amplitude || ''
+      leftLabel = yAmplitudes.length > 0 ? amplitude || '' : ''
       rightLabel = price || ''
       leftTextWidth = amplitudeSize.width
       leftTextHeight = amplitudeSize.height
@@ -121,7 +122,7 @@ const Cross: React.FC<ITimeCrossProps> = (props: ITimeCrossProps): ReactElement 
     const strokeDasharray = lineType === 'dashed' ? '4 2' : 'none'
 
     return (
-      <svg width={props.width} height={props.height} className="time-k-cross">
+      <svg width={props.width} height={props.height} className={`${props.prefixClassName || ''}-cross`}>
         {/* 纵向 */}
         <line x1={props.x} y1={0} x2={props.x} y2={props.height} stroke={color} strokeDasharray={strokeDasharray} />
 

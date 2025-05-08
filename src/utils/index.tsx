@@ -3,8 +3,9 @@
  * @date 2023-08-28
  * @author poohlaha
  */
-import { ITimeHighestProps } from '../types/component'
-import { AxisDefaultProps, AxisTextOffset, IAxisProps, XOffset } from '../types/component'
+import { IShareHighestProps, IAxisProps } from '../types/share'
+import { AxisDefaultProps, AxisTextOffset, XOffset } from '../types/default'
+import dayjs from 'dayjs'
 
 const Utils = {
   /**
@@ -86,6 +87,12 @@ const Utils = {
    */
   getTimeIndexByMinute: (timestamp: number, tradeMinutes: number[]): number => {
     const date = new Date(timestamp)
+    const time = dayjs(date)
+    if (time.isSame(time.startOf('day'))) {
+      // 如果是某一天的起始时间
+      return tradeMinutes.indexOf(timestamp)
+    }
+
     const totalMin = date.getHours() * 60 + date.getMinutes()
     return tradeMinutes.indexOf(totalMin) // -1 表示不在交易时间段中
   },
@@ -267,7 +274,7 @@ const Utils = {
     fontFamily: string,
     yLabels: Array<number> = [],
     maxPrice: number,
-    highest: ITimeHighestProps,
+    highest: IShareHighestProps,
     basic: { [K: string]: any }
   ) => {
     let points: Array<{ [K: string]: any }> = []

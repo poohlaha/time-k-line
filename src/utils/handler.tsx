@@ -4,25 +4,26 @@
  * @author poohlaha
  */
 import {
+  IShareAxisProps,
+  IShareCrossProps,
+  IShareGridProps,
+  IShareHighestProps,
+  ITimeKProps,
+  IShareTooltipProps,
+  IVolumeProps,
+  IVolumeDataItemProps
+} from '../types/share'
+import { LineType } from '../types/default'
+import {
   AxisDefaultProps,
   AxisTextOffset,
-  DEFAULT_FONT_FAMILY,
-  DEFAULT_FONT_SIZE,
   DefaultCrossProps,
   GridDefaultProps,
   HighestDefaultProps,
-  ITimeAxisProps,
-  ITimeCrossProps,
-  ITimeGridProps,
-  ITimeHighestProps,
-  ITimeKProps,
-  ITimeKTooltipProps,
-  IVolumeProps,
-  LineType,
   TimeKDefaultProps,
   TooltipDefaultDataProps,
   VolumeDefaultProps
-} from '../types/component'
+} from '../types/default'
 import Utils from './index'
 import React from 'react'
 import Grid from '../components/grid'
@@ -33,26 +34,38 @@ import Volume from '../components/volume'
 
 const Handler = {
   /**
+   * 获取样式前缀
+   */
+  getPrefixClassName: (prefixClassName: string = '') => {
+    if (Utils.isBlank(prefixClassName || '')) {
+      return TimeKDefaultProps.prefixClassName
+    }
+
+    return prefixClassName || ''
+  },
+
+  /**
    * 获取网格属性
    */
   getGridProps: (props: ITimeKProps) => {
-    const grid = props.grid
+    const grid = props.grid || {}
     const verticalLines = GridDefaultProps.verticalLines // 垂直条数(X轴)
     const horizontalLines = GridDefaultProps.horizontalLines // 水平线条数(Y轴)
 
-    if (grid === undefined) {
+    if (grid.show === false) {
       return {
         verticalLines,
         horizontalLines,
         show: false
-      } as ITimeGridProps
+      } as IShareGridProps
     }
 
     return {
       ...grid,
+      show: true,
       verticalLines,
       horizontalLines
-    } as ITimeGridProps
+    } as IShareGridProps
   },
 
   /**
@@ -99,8 +112,9 @@ const Handler = {
       totalHeight,
       xPoints: [],
       yPoints: [],
-      yAmplitudes: []
-    } as ITimeAxisProps
+      yAmplitudes: [],
+      prefixClassName: ''
+    } as IShareAxisProps
   },
 
   /**
@@ -121,7 +135,7 @@ const Handler = {
     if (!show) {
       return {
         show: false
-      } as ITimeCrossProps
+      } as IShareCrossProps
     }
 
     const color = Utils.isBlank(crossProps.color || '') ? DefaultCrossProps.color : crossProps.color || ''
@@ -144,7 +158,7 @@ const Handler = {
       textBackgroundColor,
       isAxisLeft,
       closingPrice
-    } as ITimeCrossProps
+    } as IShareCrossProps
   },
 
   /**
@@ -177,14 +191,14 @@ const Handler = {
     if (highest === undefined) {
       return {
         show: false
-      } as ITimeHighestProps
+      } as IShareHighestProps
     }
 
     const show = highest.show
     if (show === false) {
       return {
         show: false
-      } as ITimeHighestProps
+      } as IShareHighestProps
     }
 
     const lineColor = highest.lineColor ?? HighestDefaultProps.lineColor
@@ -205,7 +219,7 @@ const Handler = {
       y,
       isAxisLeft: isYLeft,
       closingPrice
-    } as ITimeHighestProps
+    } as IShareHighestProps
   },
 
   /**
@@ -225,14 +239,14 @@ const Handler = {
     if (basic === undefined) {
       return {
         show: false
-      } as ITimeHighestProps
+      } as IShareHighestProps
     }
 
     const show = basic.show ?? true
     if (!show) {
       return {
         show: false
-      } as ITimeHighestProps
+      } as IShareHighestProps
     }
 
     const lineColor = basic.lineColor ?? HighestDefaultProps.lineColor
@@ -254,8 +268,9 @@ const Handler = {
       isAxisLeft: isYLeft,
       closingPrice,
       className: 'time-k-basic',
-      hasHighest: false
-    } as ITimeHighestProps
+      hasHighest: false,
+      prefixClassName: ''
+    } as IShareHighestProps
   },
 
   /**
@@ -287,20 +302,24 @@ const Handler = {
     if (show === false) {
       return {
         show: false
-      } as ITimeKTooltipProps
+      } as IShareTooltipProps
     }
 
     const width = tooltip.width ?? TooltipDefaultDataProps.width
     const height = tooltip.height
-    const className = tooltip.className || ''
-    const background = tooltip.background ?? TooltipDefaultDataProps.background
+    const className = Utils.isBlank(tooltip.className || '')
+      ? TooltipDefaultDataProps.className
+      : tooltip.className || ''
+    const fontClassName = Utils.isBlank(tooltip.fontClassName || '')
+      ? TooltipDefaultDataProps.fontClassName
+      : tooltip.fontClassName || ''
     return {
       show: true,
       width,
       height,
       className,
-      background
-    } as ITimeKTooltipProps
+      fontClassName
+    } as IShareTooltipProps
   },
 
   /**
@@ -314,16 +333,22 @@ const Handler = {
     minPrice: number = 0
   ) => {
     // 字体大小
-    const fontSize = props.fontSize ?? DEFAULT_FONT_SIZE
+    let fontSize = props.fontSize ?? 0
+    if (fontSize === 0) {
+      fontSize = TimeKDefaultProps.fontSize
+    }
 
     // 字体名称
-    const fontFamily = Utils.isBlank(props.fontFamily || '') ? DEFAULT_FONT_FAMILY : props.fontFamily || ''
+    const fontFamily = Utils.isBlank(props.fontFamily || '') ? TimeKDefaultProps.fontFamily : props.fontFamily || ''
 
     // 涨颜色
     const riseColor = Utils.isBlank(props.riseColor || '') ? TimeKDefaultProps.riseColor : props.riseColor || ''
 
     // 跌颜色
     const fallColor = Utils.isBlank(props.fallColor || '') ? TimeKDefaultProps.fallColor : props.fallColor || ''
+
+    // 持平价格
+    const flatColor = Utils.isBlank(props.flatColor || '') ? TimeKDefaultProps.flatColor : props.flatColor || ''
 
     const basicShow = Handler.getBasicShow(props)
 
@@ -412,7 +437,7 @@ const Handler = {
       width,
       height,
       axis.isYLeft,
-      props.fontSize,
+      fontSize,
       axis.xLabels
     )
 
@@ -428,11 +453,16 @@ const Handler = {
       basic
     )
 
+    // 获取样式前缀
+    const prefixClassName = Handler.getPrefixClassName(props.prefixClassName || '')
+
     return {
+      prefixClassName,
       fontSize,
       fontFamily,
       riseColor,
       fallColor,
+      flatColor,
       axisPadding,
       volume,
       width,
@@ -464,34 +494,59 @@ const HandleCommon = {
   getGrid: (
     width: number,
     height: number,
-    grid: ITimeGridProps,
+    grid: IShareGridProps,
     xPoints: Array<{ [K: string]: any }> = [],
     yPoints: Array<{ [K: string]: any }> = [],
-    isYLeft: boolean
+    isYLeft: boolean,
+    prefixClassName: string = ''
   ) => {
     if (grid.show === false) {
       return null
     }
 
-    return <Grid {...grid} width={width} height={height} xPoints={xPoints} yPoints={yPoints} isYLeft={isYLeft} />
+    return (
+      <Grid
+        {...grid}
+        width={width}
+        height={height}
+        xPoints={xPoints}
+        yPoints={yPoints}
+        isYLeft={isYLeft}
+        prefixClassName={prefixClassName || ''}
+      />
+    )
   },
 
   /**
    * x 轴和 y 轴
    */
   getAxis: (
-    axis: ITimeAxisProps,
+    axis: IShareAxisProps,
     xPoints: Array<{ [K: string]: any }> = [],
     yPoints: Array<{ [K: string]: any }> = [],
-    yAmplitudes: Array<string> = []
+    yAmplitudes: Array<string> = [],
+    prefixClassName: string = ''
   ) => {
-    return <Axis {...axis} xPoints={xPoints} yPoints={yPoints} yAmplitudes={yAmplitudes} />
+    return (
+      <Axis
+        {...axis}
+        xPoints={xPoints}
+        yPoints={yPoints}
+        yAmplitudes={yAmplitudes}
+        prefixClassName={prefixClassName || ''}
+      />
+    )
   },
 
   /**
    * 最高线
    */
-  getHighest: (highest: ITimeHighestProps, hasHighest: boolean, grid: ITimeGridProps) => {
+  getHighest: (
+    highest: IShareHighestProps,
+    hasHighest: boolean,
+    grid: IShareGridProps,
+    prefixClassName: string = ''
+  ) => {
     if (hasHighest) {
       // 如果背景显示, 则不画线
       if (grid.show) {
@@ -502,13 +557,13 @@ const HandleCommon = {
     const show = highest.show ?? true
     if (!show) return null
 
-    return <Highest {...highest} hasHighest={hasHighest} />
+    return <Highest {...highest} hasHighest={hasHighest} prefixClassName={prefixClassName || ''} />
   },
 
   /**
    * 基线
    */
-  getBasic: (basic: ITimeHighestProps, hasBasic: boolean, grid: ITimeGridProps) => {
+  getBasic: (basic: IShareHighestProps, hasBasic: boolean, grid: IShareGridProps, prefixClassName: string = '') => {
     if (hasBasic) {
       if (grid.show) {
         return null
@@ -518,13 +573,13 @@ const HandleCommon = {
     const show = basic.show ?? true
     if (!show) return null
 
-    return <Highest {...basic} hasHighest={hasBasic} />
+    return <Highest {...basic} hasHighest={hasBasic} prefixClassName={prefixClassName || ''} />
   },
 
   /**
    * 十字准线
    */
-  getCross: (cross: ITimeCrossProps, crossProps: { [K: string]: any } = {}) => {
+  getCross: (cross: IShareCrossProps, crossProps: { [K: string]: any } = {}, prefixClassName: string = '') => {
     if (!cross.show) return null
 
     return (
@@ -535,6 +590,7 @@ const HandleCommon = {
         show={crossProps.show}
         yLeftLabel={crossProps.yLeftLabel}
         yRightLabel={crossProps.yRightLabel}
+        prefixClassName={prefixClassName || ''}
       />
     )
   },
@@ -545,22 +601,21 @@ const HandleCommon = {
   getVolumeBars: (
     props: ITimeKProps,
     volumeProps: { [K: string]: any },
-    data: Array<number[]> = [],
+    data: Array<IVolumeDataItemProps> = [],
     fontSize: number,
     fontFamily: string,
-    tradeMinutes: Array<number> = []
+    tradeMinutes: Array<number> = [],
+    prefixClassName: string = ''
   ) => {
     if (!volumeProps.show) return null
 
-    let totalCount = 0
+    let total = 0
     if (data.length > 0) {
-      let results = data[data.length - 1]
-      if (results.length > 0) {
-        totalCount = results[2]
-      }
+      let item = data[data.length - 1]
+      total = item.volume ?? 0
     }
 
-    const maxVolume = Math.max(...data.map(d => d[2]))
+    const maxVolume = Math.max(...data.map(d => d.volume ?? 0))
     const volumeHeight = volumeProps.height ?? VolumeDefaultProps.height
     return (
       <svg width={props.width} height={props.height} className="time-k-volume">
@@ -572,17 +627,16 @@ const HandleCommon = {
           fontSize={fontSize}
           fontFamily={fontFamily}
         >
-          成交量{Utils.formatNumberUnit(totalCount)}手
+          成交量{Utils.formatNumberUnit(total)}手
         </text>
 
         {data.length > 0 &&
           data.map((item, index: number) => {
-            const [time, price, volume] = item
-            const prevPrice = index > 0 ? data[index - 1][1] : price
-            const color = price >= prevPrice ? volumeProps.riseColor || '' : volumeProps.fallColor || ''
+            const prevPrice = index > 0 ? data[index - 1].price : item.price
+            const color = item.price >= prevPrice ? volumeProps.riseColor || '' : volumeProps.fallColor || ''
             const barWidth = props.width / tradeMinutes.length
-            const barHeight = (volume / maxVolume) * volumeHeight
-            const timeIndex = Utils.getTimeIndexByMinute(time, tradeMinutes)
+            const barHeight = (item.volume / maxVolume) * volumeHeight
+            const timeIndex = Utils.getTimeIndexByMinute(item.timestamp, tradeMinutes)
             if (timeIndex === -1) return null
 
             const x = timeIndex * barWidth
@@ -594,10 +648,67 @@ const HandleCommon = {
                 width={barWidth}
                 height={barHeight}
                 color={color}
+                prefixClassName={prefixClassName}
               />
             )
           })}
       </svg>
+    )
+  },
+
+  /**
+   * 获取公共
+   */
+  getCommon: (
+    props: ITimeKProps,
+    prefixClassName: string = '',
+    width: number = 0,
+    height: number = 0,
+    grid: IShareGridProps,
+    axis: IShareAxisProps,
+    highest: IShareHighestProps,
+    basic: IShareHighestProps,
+    cross: IShareCrossProps,
+    volume: { [K: string]: any },
+    volumeData: Array<IVolumeDataItemProps> = [],
+    xPoints: Array<{ [K: string]: any }> = [],
+    yPoints: Array<{ [K: string]: any }> = [],
+    yAmplitudes: Array<string> = [],
+    tradeMinutes: Array<number> = [],
+    crossProps: { [K: string]: any } = {},
+    fontSize: number = 0,
+    fontFamily: string = '',
+    hasHighest: boolean,
+    hasBasic: boolean
+  ) => {
+    return (
+      <>
+        {/* 背景网格 */}
+        {HandleCommon.getGrid(width, height, grid, xPoints, yPoints, axis.isYLeft, prefixClassName || '')}
+
+        {/* 坐标轴 */}
+        {HandleCommon.getAxis(axis, xPoints, yPoints, yAmplitudes, prefixClassName || '')}
+
+        {/* 最高线 */}
+        {HandleCommon.getHighest(highest, hasHighest, grid, prefixClassName || '')}
+
+        {/* 基线 */}
+        {HandleCommon.getBasic(basic, hasBasic, grid, prefixClassName || '')}
+
+        {/* 十字准线 */}
+        {HandleCommon.getCross(cross, crossProps, prefixClassName || '')}
+
+        {/* 成交量柱状图 */}
+        {HandleCommon.getVolumeBars(
+          props,
+          volume,
+          volumeData,
+          fontSize,
+          fontFamily,
+          tradeMinutes,
+          prefixClassName || ''
+        )}
+      </>
     )
   }
 }

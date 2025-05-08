@@ -4,12 +4,21 @@
  * @author poohlaha
  */
 import React, { ReactElement } from 'react'
-import { ITimeVolumeProps } from '../../types/component'
+import { IShareVolumeProps } from '../../types/share'
 
-const Volume = (props: ITimeVolumeProps): ReactElement => {
+const Volume: React.FC<IShareVolumeProps> = (props: IShareVolumeProps): ReactElement => {
   const render = () => {
     // width * 0.8, 给每根柱子留点间隙
-    return <rect x={props.x} y={props.y} width={props.width * 0.8} height={props.height} fill={props.color} />
+    return (
+      <rect
+        className={`${props.prefixClassName || ''}-volume`}
+        x={props.x}
+        y={props.y}
+        width={props.width * 0.8}
+        height={props.height}
+        fill={props.color}
+      />
+    )
   }
 
   return render()

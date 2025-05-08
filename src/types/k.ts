@@ -3,7 +3,7 @@
  * @date 2025-05-07
  * @author poohlaha
  */
-import { ITimeKProps, TimeKDefaultProps } from './component'
+import { IKDataItemProps, ITimeKProps } from './share'
 
 /**
  * data
@@ -18,12 +18,5 @@ import { ITimeKProps, TimeKDefaultProps } from './component'
  * ]
  */
 export interface IKProps extends ITimeKProps {
-  closingPrice?: number // 昨日收盘价
-  flatColor?: string // 持平颜色
-}
-
-// K 线图默认属性
-export const KDefaultProps = {
-  ...TimeKDefaultProps,
-  flatColor: '#888888'
+  data: Array<IKDataItemProps> // 数据
 }

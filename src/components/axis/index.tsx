@@ -4,11 +4,11 @@
  * @author poohlaha
  */
 import React, { ReactElement } from 'react'
-import { DEFAULT_FONT_FAMILY, DEFAULT_FONT_SIZE } from '../../types/component'
+import { AxisDefaultProps, AxisTextOffset, TimeKDefaultProps } from '../../types/default'
 import Utils from '../../utils'
-import { AxisDefaultProps, AxisTextOffset, ITimeAxisProps } from '../../types/component'
+import { IShareAxisProps } from '../../types/share'
 
-const Axis: React.FC<ITimeAxisProps> = (props: ITimeAxisProps): ReactElement => {
+const Axis: React.FC<IShareAxisProps> = (props: IShareAxisProps): ReactElement => {
   /**
    * 获取涨跌幅
    */
@@ -28,8 +28,11 @@ const Axis: React.FC<ITimeAxisProps> = (props: ITimeAxisProps): ReactElement => 
   const render = () => {
     let lineColor = props.lineColor ?? AxisDefaultProps.lineColor
     let textColor = props.textColor ?? AxisDefaultProps.textColor
-    const fontSize = props.fontSize ?? DEFAULT_FONT_SIZE
-    const fontFamily = props.fontFamily ?? DEFAULT_FONT_FAMILY
+    let fontSize = props.fontSize ?? 0
+    if (fontSize === 0) {
+      fontSize = TimeKDefaultProps.fontSize
+    }
+    const fontFamily = Utils.isBlank(props.fontFamily || '') ? TimeKDefaultProps.fontFamily : props.fontFamily || ''
 
     const isYLeft = props.isYLeft
     const xPoints = props.xPoints || []
@@ -37,7 +40,11 @@ const Axis: React.FC<ITimeAxisProps> = (props: ITimeAxisProps): ReactElement => 
 
     return (
       <>
-        <svg width={props.width} height={props.height} className="time-k-axis-x-y-lines">
+        <svg
+          width={props.width}
+          height={props.height}
+          className={`${props.prefixClassName || ''}-axis ${props.className || ''}`}
+        >
           {/* x 轴线(减去1避免覆盖 Y 轴 */}
           {props.needAxisXLine && (
             <line x1={0} y1={props.height - 0.5} x2={props.width} y2={props.height - 0.5} stroke={lineColor} />
@@ -67,7 +74,7 @@ const Axis: React.FC<ITimeAxisProps> = (props: ITimeAxisProps): ReactElement => 
         </svg>
 
         {/* y轴刻度线和文字(价格) */}
-        <svg width={props.width} height={props.height} className="time-k-axis-y-prices">
+        <svg width={props.width} height={props.height} className={`${props.prefixClassName || ''}-axis-y`}>
           {yPoints.length > 0 &&
             yPoints.map((point, i) => {
               const line = point.line || {}
@@ -148,7 +155,7 @@ const Axis: React.FC<ITimeAxisProps> = (props: ITimeAxisProps): ReactElement => 
         {/* y轴刻度线和文字(比例) */}
 
         {/* x 轴刻度线和文字, 第一个和最后一个要单独处理, 防止遮挡 */}
-        <svg width={props.width} height={props.totalHeight} className="time-k-axis-x-times">
+        <svg width={props.width} height={props.totalHeight} className={`${props.prefixClassName || ''}-axis-x`}>
           {xPoints.map((point, i: number) => {
             const line = point.line || {}
             const text = point.text || {}

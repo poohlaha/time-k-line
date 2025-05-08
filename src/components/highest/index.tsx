@@ -4,11 +4,11 @@
  * @author poohlaha
  */
 import React from 'react'
-import { HighestDefaultProps, ITimeHighestProps } from '../../types/component'
+import { IShareHighestProps } from '../../types/share'
 import Utils from '../../utils'
-import { AxisTextOffset, getLabelLeftPadding, getLabelRightPadding } from '../../types/component'
+import { HighestDefaultProps, AxisTextOffset, getLabelLeftPadding, getLabelRightPadding } from '../../types/default'
 
-const Highest: React.FC<ITimeHighestProps> = (props: ITimeHighestProps) => {
+const Highest: React.FC<IShareHighestProps> = (props: IShareHighestProps) => {
   const render = () => {
     const lineColor = props.lineColor ?? HighestDefaultProps.lineColor
     const textColor = props.textColor ?? HighestDefaultProps.textColor
@@ -34,7 +34,7 @@ const Highest: React.FC<ITimeHighestProps> = (props: ITimeHighestProps) => {
       amplitudeWidth = amplitudeSize.width
     }
     return (
-      <g className={`time-k-highest ${props.className || ''}`}>
+      <g className={`${props.prefixClassName || ''}-highest ${props.className || ''}`}>
         {/* 水平线 */}
         <line
           x1={0}
@@ -50,7 +50,7 @@ const Highest: React.FC<ITimeHighestProps> = (props: ITimeHighestProps) => {
         {!props.hasHighest && (
           <text
             x={textX}
-            y={y + height}
+            y={y - height}
             fill={textColor}
             textAnchor="end"
             fontSize={props.fontSize}
@@ -65,7 +65,7 @@ const Highest: React.FC<ITimeHighestProps> = (props: ITimeHighestProps) => {
         {!props.hasHighest && !Utils.isBlank(amplitude || '') && (
           <text
             x={props.isAxisLeft ? getLabelRightPadding(props.width) : getLabelLeftPadding(amplitudeWidth)}
-            y={y + height}
+            y={y - height}
             fill={textColor}
             textAnchor="end"
             fontSize={props.fontSize}

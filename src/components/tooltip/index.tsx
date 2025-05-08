@@ -4,55 +4,65 @@
  * @author poohlaha
  */
 import React, { PropsWithChildren, ReactElement, useEffect, useRef, useState } from 'react'
-import { ITimeKTooltipProps, ITooltipDataProps, TooltipDefaultDataProps } from '../../types/component'
+import { TooltipDefaultDataProps } from '../../types/default'
+import { IShareTooltipProps, ITooltipDataProps } from '../../types/share'
 import ReactDOM from 'react-dom'
+import Utils from '../../utils'
 
-const Tooltip: React.FC<ITimeKTooltipProps> = (props: PropsWithChildren<ITimeKTooltipProps>): ReactElement => {
+const Tooltip: React.FC<IShareTooltipProps> = (props: PropsWithChildren<IShareTooltipProps>): ReactElement => {
   const [point, setPoint] = useState({ x: 0, y: 0 })
+  const [visible, setVisible] = useState(false)
 
   const tooltipRef = useRef(null)
 
   /**
    * 计算坐标, 判断是否超越边界
    */
-  const calculateCoordinates = () => {
-    if (!tooltipRef.current) return { x: 0, y: 0 }
-
-    let x = props.x ?? 0
-    let y = props.y ?? 0
-    const rect = (tooltipRef.current as HTMLElement).getBoundingClientRect()
-    const width = rect.width
-    const height = rect.height
-
-    const clientWidth = window.innerWidth ?? document.documentElement.clientWidth
-    const clientHeight = window.innerHeight ?? document.documentElement.clientHeight
-
-    const padding = 10 // 偏移量 10
-    // 超出边界
-    if (x + width + padding > clientWidth) {
-      x = clientWidth - width - padding - (clientWidth - x) - padding
-    }
-
-    if (y + height + padding > clientHeight) {
-      y = clientHeight - height - padding - (clientHeight - y) - padding
-    }
-
-    return { x, y }
-  }
-
   useEffect(() => {
-    const { x, y } = calculateCoordinates()
-    setPoint({ x, y })
+    const current = tooltipRef.current
+    if (!current) return
+
+    requestAnimationFrame(() => {
+      let x = props.x ?? 0
+      let y = props.y ?? 0
+      const rect = (current as HTMLElement).getBoundingClientRect()
+      const width = rect.width
+      const height = rect.height
+
+      const clientWidth = window.innerWidth ?? document.documentElement.clientWidth
+      const clientHeight = window.innerHeight ?? document.documentElement.clientHeight
+
+      const padding = 10 // 偏移量 10
+      // 超出边界
+      if (x + width + padding > clientWidth) {
+        x = clientWidth - width - padding - (clientWidth - x) - padding
+      }
+
+      if (y + height + padding > clientHeight) {
+        y = clientHeight - height - padding - (clientHeight - y) - padding
+      }
+
+      setPoint({ x, y })
+      setVisible(true)
+    })
   }, [props.x, props.y])
 
   const render = () => {
     const show = props.show ?? TooltipDefaultDataProps.show
     if (!show || props.data.length === 0) return <div></div>
-    const background = props.background ?? TooltipDefaultDataProps.background
+
+    const className = Utils.isBlank(props.className || '') ? TooltipDefaultDataProps.className : props.className || ''
+    const fontClassName = Utils.isBlank(props.fontClassName || '')
+      ? TooltipDefaultDataProps.fontClassName
+      : props.fontClassName || ''
     return ReactDOM.createPortal(
       <div
-        className={`time-k-tooltip ${props.className || ''} p-2 absolute w-40 rounded shadow-lg z-50`}
-        style={{ left: point.x, top: point.y, background }}
+        className={`time-k-tooltip ${className || ''} p-2 absolute w-40 rounded shadow-lg z-50 ${fontClassName || ''}`}
+        style={{
+          left: point.x,
+          top: point.y,
+          visibility: visible ? 'visible' : 'hidden'
+        }}
         ref={tooltipRef}
       >
         {props.data.map((item: ITooltipDataProps, index: number) => {
@@ -61,8 +71,8 @@ const Tooltip: React.FC<ITimeKTooltipProps> = (props: PropsWithChildren<ITimeKTo
               className="timer-tooltip-item h-6 flex items-center justify-between cursor-pointer text-gray-900"
               key={index}
             >
-              <p className="text-xs mr-1">{item.label || ''}</p>
-              <p className="text-xs" style={{ color: item.color || '' }}>
+              <p className="mr-1">{item.label || ''}</p>
+              <p className="" style={{ color: item.color || '' }}>
                 {item.value || '-'}
               </p>
             </div>
