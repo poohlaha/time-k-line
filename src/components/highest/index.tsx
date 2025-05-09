@@ -33,6 +33,8 @@ const Highest: React.FC<IShareHighestProps> = (props: IShareHighestProps) => {
       const amplitudeSize = Utils.onMeasureTextSize(amplitude, props.fontSize, props.fontFamily)
       amplitudeWidth = amplitudeSize.width
     }
+
+    const needAnotherSide = props.needAnotherSide ?? true
     return (
       <g className={`${props.prefixClassName || ''}-highest ${props.className || ''}`}>
         {/* 水平线 */}
@@ -62,7 +64,7 @@ const Highest: React.FC<IShareHighestProps> = (props: IShareHighestProps) => {
         )}
 
         {/* 文字标签(百分比) */}
-        {!props.hasHighest && !Utils.isBlank(amplitude || '') && (
+        {!props.hasHighest && !Utils.isBlank(amplitude || '') && needAnotherSide && (
           <text
             x={props.isAxisLeft ? getLabelRightPadding(props.width) : getLabelLeftPadding(amplitudeWidth)}
             y={y - height}

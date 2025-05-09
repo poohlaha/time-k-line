@@ -11,7 +11,8 @@ import {
   ITimeKProps,
   IShareTooltipProps,
   IVolumeProps,
-  IVolumeDataItemProps
+  IVolumeDataItemProps,
+  IHighestProps
 } from '../types/share'
 import { LineType } from '../types/default'
 import {
@@ -177,7 +178,7 @@ const Handler = {
    * 获取最高线属性
    */
   getHighestProps: (
-    props: ITimeKProps,
+    highest: IHighestProps | undefined,
     width: number,
     height: number,
     price: number,
@@ -187,7 +188,6 @@ const Handler = {
     yLabels: Array<number>,
     closingPrice: number
   ) => {
-    const highest = props.highest
     if (highest === undefined) {
       return {
         show: false
@@ -226,6 +226,7 @@ const Handler = {
    * 获取 基线 属性
    */
   getBasicProps: (
+    prefixClassName: string = '',
     props: ITimeKProps,
     width: number,
     height: number,
@@ -233,7 +234,8 @@ const Handler = {
     fontFamily: string,
     isYLeft: boolean,
     yLabels: Array<number>,
-    closingPrice: number
+    closingPrice: number,
+    needAnotherSide: boolean = true
   ) => {
     const basic = props.basic
     if (basic === undefined) {
@@ -267,9 +269,10 @@ const Handler = {
       y,
       isAxisLeft: isYLeft,
       closingPrice,
-      className: 'time-k-basic',
+      className: `${prefixClassName || ''}-basic`,
       hasHighest: false,
-      prefixClassName: ''
+      prefixClassName,
+      needAnotherSide: needAnotherSide ?? true
     } as IShareHighestProps
   },
 
@@ -331,8 +334,12 @@ const Handler = {
     closingPrice: number = 0,
     maxPrice: number = 0,
     minPrice: number = 0,
-    needHighest: boolean = true
+    needHighest: boolean = true,
+    needAnotherSide: boolean = true
   ) => {
+    // 获取样式前缀
+    const prefixClassName = Handler.getPrefixClassName(props.prefixClassName || '')
+
     // 字体大小
     let fontSize = props.fontSize ?? 0
     if (fontSize === 0) {
@@ -411,7 +418,7 @@ const Handler = {
 
     // 最高线
     const highest = Handler.getHighestProps(
-      props,
+      props.highest,
       width,
       height,
       maxPrice,
@@ -424,6 +431,7 @@ const Handler = {
 
     // 基线
     const basic = Handler.getBasicProps(
+      prefixClassName,
       props,
       width,
       height,
@@ -431,7 +439,8 @@ const Handler = {
       fontFamily,
       axis.isYLeft,
       yLabels,
-      closingPrice ?? 0
+      closingPrice ?? 0,
+      needAnotherSide
     )
 
     // tooltip
@@ -457,9 +466,6 @@ const Handler = {
       basic,
       needHighest
     )
-
-    // 获取样式前缀
-    const prefixClassName = Handler.getPrefixClassName(props.prefixClassName || '')
 
     return {
       prefixClassName,

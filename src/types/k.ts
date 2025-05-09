@@ -3,7 +3,7 @@
  * @date 2025-05-07
  * @author poohlaha
  */
-import { IKDataItemProps, ITimeKProps } from './share'
+import { IKDataItemProps, IShareLineKHighLowProps, ITimeKProps } from './share'
 
 /**
  * data
@@ -19,4 +19,6 @@ import { IKDataItemProps, ITimeKProps } from './share'
  */
 export interface IKProps extends ITimeKProps {
   data: Array<IKDataItemProps> // 数据
+  high?: IShareLineKHighLowProps // 最高线属性
+  low?: IShareLineKHighLowProps // 最低线
 }

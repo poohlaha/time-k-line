@@ -82,6 +82,7 @@ export interface IShareHighestProps extends IHighestProps {
   y: number
   closingPrice: number
   className?: string
+  needAnotherSide?: boolean
 }
 
 // 十字准线
@@ -245,4 +246,10 @@ export interface IShareTabsProps {
   activeTextColor?: string // 选中的文字颜色
   fontClassName?: string // 字体样式
   onTabClick?: (index: number, item: { [K: string]: any }) => void
+}
+
+// K 线图最高线|最低线属性
+export interface IShareLineKHighLowProps extends IHighestProps {
+  lineWidth?: number
+  circleColor?: string
 }

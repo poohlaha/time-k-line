@@ -45,6 +45,12 @@ export const HighestDefaultProps = {
   lineType: 'dashed'
 }
 
+export const HighLowDefaultProps = {
+  circleColor: '#666666',
+  lineType: 'solid',
+  lineWidth: 80
+}
+
 // 成交量柱状图默认属性
 export const VolumeDefaultProps = {
   show: true,
