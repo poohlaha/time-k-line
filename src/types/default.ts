@@ -55,7 +55,7 @@ export const HighLowDefaultProps = {
 export const VolumeDefaultProps = {
   show: true,
   textColor: '#3D404D',
-  height: 30
+  height: 40
 }
 
 // 十字准线默认属性

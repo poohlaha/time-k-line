@@ -82,9 +82,11 @@ const ShareLine: React.FC<IShareLineProps> = (props: IShareLineProps): ReactElem
 
     const title = Utils.isBlank(dailyK.title || '') ? DefaultShareLineProps.dailyTitle : dailyK.title || ''
     const data = dailyK.data || []
+    const onGetMoreData = dailyK.onGetMoreData
     return {
       title,
-      data
+      data,
+      onGetMoreData
     } as IShareLineKProps
   }
 
@@ -99,9 +101,11 @@ const ShareLine: React.FC<IShareLineProps> = (props: IShareLineProps): ReactElem
 
     const title = Utils.isBlank(weekK.title || '') ? DefaultShareLineProps.weekTitle : weekK.title || ''
     const data = weekK.data || []
+    const onGetMoreData = weekK.onGetMoreData
     return {
       title,
-      data
+      data,
+      onGetMoreData
     } as IShareLineKProps
   }
 
@@ -116,9 +120,11 @@ const ShareLine: React.FC<IShareLineProps> = (props: IShareLineProps): ReactElem
 
     const title = Utils.isBlank(monthK.title || '') ? DefaultShareLineProps.monthTitle : monthK.title || ''
     const data = monthK.data || []
+    const onGetMoreData = monthK.onGetMoreData
     return {
       title,
-      data
+      data,
+      onGetMoreData
     } as IShareLineKProps
   }
 
@@ -326,12 +332,9 @@ const ShareLine: React.FC<IShareLineProps> = (props: IShareLineProps): ReactElem
       return null
     }
 
-    const className = dailyK.className || ''
-    const data = dailyK.data || []
     const timeProps: IKProps = {
       ...getTimeKProps(commonProps),
-      className,
-      data
+      ...(dailyK || {})
     }
 
     return <KLine {...timeProps} />

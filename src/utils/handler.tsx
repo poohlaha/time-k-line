@@ -629,7 +629,7 @@ const HandleCommon = {
     const maxVolume = Math.max(...data.map(d => d.volume ?? 0))
     const volumeHeight = volumeProps.height ?? VolumeDefaultProps.height
     return (
-      <svg width={props.width} height={props.height} className="time-k-volume">
+      <svg width={props.width} height={props.height} className={`${prefixClassName || ''}-volume`}>
         <text
           x={AxisTextOffset}
           y={props.height - volumeHeight + AxisTextOffset}

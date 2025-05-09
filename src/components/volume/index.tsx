@@ -11,7 +11,7 @@ const Volume: React.FC<IShareVolumeProps> = (props: IShareVolumeProps): ReactEle
     // width * 0.8, 给每根柱子留点间隙
     return (
       <rect
-        className={`${props.prefixClassName || ''}-volume`}
+        className={`${props.prefixClassName || ''}-volume-rect`}
         x={props.x}
         y={props.y}
         width={props.width * 0.8}

@@ -166,6 +166,7 @@ export interface IShareProps {
   flatColor?: string // 持平颜色
   fontSize?: number // 字体大小
   fontFamily?: string // 字体名称
+  onGetMoreData?: () => void
 }
 
 // 均线, 5日、10日、20日
@@ -235,6 +236,7 @@ export interface IShareLineKProps {
   title?: string
   className?: string
   data: Array<IKDataItemProps> // 数据
+  onGetMoreData?: () => void
 }
 
 // tabs 属性

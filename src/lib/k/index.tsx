@@ -33,6 +33,11 @@ const KLine: React.FC<IKProps> = (props: IKProps): ReactElement => {
   const [crossProps, setCrossProps] = useState({ show: false, x: 0, y: 0, index: 0, yLeftLabel: '', yRightLabel: '' })
   const [ma, setMa] = useState({ ma5: '0.00', ma10: '0.00', ma20: '0.00' })
 
+  const [startIndex, setStartIndex] = useState(0)
+  const [endIndex, setEndIndex] = useState(0)
+  const wheelDeltaRef = useRef<{ deltaX: number; deltaY: number } | null>(null)
+  const tickingRef = useRef(false)
+
   useEffect(() => {
     const current = maRef.current
     if (!current) return
@@ -52,17 +57,102 @@ const KLine: React.FC<IKProps> = (props: IKProps): ReactElement => {
     const ma10 = onCalculateMa(data, data.length - 1, 10) // 计算10日均线
     const ma20 = onCalculateMa(data, data.length - 1, 20) // 计算20日均线
     setMa({ ma5, ma10, ma20 })
+    setStartIndex(0)
+    setEndIndex(data.length)
   }, [props.data || []])
+
+  useEffect(() => {
+    if (startIndex < 10) {
+      console.log('fetch more data ...')
+      props.onGetMoreData?.()
+    }
+  }, [startIndex])
+
+  /**
+   * 滚轴滚动事件
+   * 缩小（deltaY > 0）：视图向左平移，从右边挤出更多K线(startIndex 左移，visibleCount 增大)
+   * 放大（deltaY < 0）：视图向右平移，从右边“收缩”数据，只显示更少的K线(startIndex 右移，visibleCount 减小)
+   * 不考虑鼠标位置，鼠标只触发行为，不作为缩放锚点
+   *
+   * macOS触控板:
+   * 双指同时向左/右滑 ➜ 触发的是 wheel 事件中的 deltaX
+   * 双指同时向上/下滑 ➜ 触发的是 deltaY。
+   * 两个手指一边一个方向滑（比如左手指向左，右手指向右） ➜ macOS 会理解为“缩放手势（pinch）”
+   *
+   * 双指左右滑动 | Math.abs(deltaX) > deltaY | 平移
+   * 双指上下滑动 | Math.abs(deltaY) > deltaX | 缩放
+   * 双指外扩（Trackpad 缩放） | ctrlKey === true | 缩放（更敏感）
+   */
+  const onHandleWheel = (e: React.WheelEvent<SVGSVGElement>) => {
+    // 隐藏十字准线和tooltip
+    onMouseLeave()
+
+    if (!wheelDeltaRef.current) {
+      wheelDeltaRef.current = { deltaX: e.deltaX, deltaY: e.deltaY }
+    } else {
+      wheelDeltaRef.current.deltaX += e.deltaX
+      wheelDeltaRef.current.deltaY += e.deltaY
+    }
+
+    if (!tickingRef.current) {
+      tickingRef.current = true
+      requestAnimationFrame(() => {
+        const deltas = wheelDeltaRef.current
+        if (deltas) {
+          onProcessWheel(deltas.deltaX, deltas.deltaY)
+          wheelDeltaRef.current = null
+        }
+        tickingRef.current = false
+      })
+    }
+  }
+
+  const onProcessWheel = (deltaX: number, deltaY: number) => {
+    const visibleCount = endIndex - startIndex
+    const zoomStep = 0.2
+    const minCount = 25
+    const maxCount = props.data.length
+
+    // 判断操作类型：主方向为 X 是平移，主方向为 Y 是缩放
+    const isPan = Math.abs(deltaX) > Math.abs(deltaY)
+
+    if (isPan) {
+      // 左右滑动平移
+      const currentCount = endIndex - startIndex
+      const isMac = /Mac/.test(navigator.platform)
+      const zoomIn = isMac ? deltaX < 0 : deltaY < 0
+      const newCount = zoomIn
+        ? Math.max(minCount, currentCount - zoomStep)
+        : Math.min(maxCount, currentCount + zoomStep)
+
+      const newStart = Math.max(0, endIndex - newCount)
+
+      setStartIndex(newStart)
+      setEndIndex(endIndex)
+    } else {
+      // 📏 上下滑动缩放：从右向左（放大），左向右（缩小）
+      const zoomIn = deltaY < 0 // 向上/外扩 = 放大
+      let newVisibleCount = zoomIn
+        ? Math.max(25, visibleCount - zoomStep)
+        : Math.min(props.data.length, visibleCount + zoomStep)
+
+      // 🔒 固定 endIndex（右边对齐）
+      let newStart = Math.max(0, endIndex - newVisibleCount)
+      let newEnd = endIndex
+
+      setStartIndex(newStart)
+      setEndIndex(newEnd)
+    }
+  }
 
   /**
    * 获取价格最小值和最大值
    */
-  const getPriceRange = () => {
+  const getPriceRange = (data: Array<IKDataItemProps> = []) => {
     // 网格背景
     const grid = Handler.getGridProps(props)
     const verticalLines = grid.verticalLines ?? GridDefaultProps.verticalLines
 
-    const data: Array<IKDataItemProps> = props.data || []
     let minPrice = 0
     let maxPrice = 0
     let high: number = 0
@@ -117,14 +207,16 @@ const KLine: React.FC<IKProps> = (props: IKProps): ReactElement => {
       }
     }
 
-    return { minPrice, maxPrice, volumes, data, xLabels, tradeMinutes, high, highIndex, low, lowIndex }
+    return { minPrice, maxPrice, volumes, xLabels, tradeMinutes, high, highIndex, low, lowIndex }
   }
 
   /**
    * 计算 X 轴, Y 轴坐标点
    */
-  const onCalculateXYPoints = () => {
-    const { maxPrice, minPrice, volumes, data, xLabels, tradeMinutes, high, highIndex, low, lowIndex } = getPriceRange()
+  const onCalculateXYPoints = (data: Array<IKDataItemProps> = []) => {
+    const { maxPrice, minPrice, volumes, xLabels, tradeMinutes, high, highIndex, low, lowIndex } = getPriceRange(
+      data || []
+    )
     const commonProps = Handler.getKTimeProps(
       {
         ...(props || {}),
@@ -594,12 +686,14 @@ const KLine: React.FC<IKProps> = (props: IKProps): ReactElement => {
   }
 
   const render = () => {
-    const commonProps = onCalculateXYPoints()
+    const visibleData = (props.data || []).slice(startIndex, endIndex)
+    const commonProps = onCalculateXYPoints(visibleData)
     const { unitWidth, candleWidth, scaleY } = onCalculateCandleProps(commonProps)
     let height = size.height - commonProps.axisPadding - (commonProps.volume.show ? commonProps.volume.height || 0 : 0)
     if (height < 0) {
       height = 0
     }
+
     return (
       <div
         className={`${commonProps.prefixClassName || ''}-k-chart items-center justify-center wh100 relative ${props.className || ''}`}
@@ -617,6 +711,7 @@ const KLine: React.FC<IKProps> = (props: IKProps): ReactElement => {
           width={size.width}
           height={size.height}
           ref={svgRef}
+          onWheel={onHandleWheel}
           onMouseMove={e => {
             onMouseMove(
               e,
