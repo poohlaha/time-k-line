@@ -13,6 +13,7 @@ import {
   GridDefaultProps,
   HighestDefaultProps,
   HighLowDefaultProps,
+  KDefaultProps,
   TimeKDefaultProps
 } from '../../types/default'
 import {
@@ -33,10 +34,42 @@ const KLine: React.FC<IKProps> = (props: IKProps): ReactElement => {
   const [crossProps, setCrossProps] = useState({ show: false, x: 0, y: 0, index: 0, yLeftLabel: '', yRightLabel: '' })
   const [ma, setMa] = useState({ ma5: '0.00', ma10: '0.00', ma20: '0.00' })
 
-  const [startIndex, setStartIndex] = useState(0)
-  const [endIndex, setEndIndex] = useState(0)
   const wheelDeltaRef = useRef<{ deltaX: number; deltaY: number } | null>(null)
   const tickingRef = useRef(false)
+  const [unitWidth, setUnitWidth] = useState(0)
+  const [candleWidth, setCandleWidth] = useState(0)
+  const [data, setData] = useState<Array<IKDataItemProps>>([])
+  const [visibleData, setVisibleData] = useState<Array<IKDataItemProps>>([])
+
+  const loadingMoreRef = useRef(false)
+  const ref = useRef(false)
+  // 设置区间, 用于拖动和缩放
+  const [viewRange, setViewRange] = useState({ start: 0, end: 0, count: 0, total: 0 })
+  const draggable = useRef({
+    isDragging: false,
+    startX: 0,
+    lastX: 0
+  })
+
+  useEffect(() => {
+    if (ref.current) return
+
+    const data = props.data || []
+    if (data.length === 0) {
+      setMa({ ma5: '0.00', ma10: '0.00', ma20: '0.00' })
+      return
+    }
+
+    OnCalculateCandleWidth(data)
+    const ma5 = onCalculateMa(data, data.length - 1, 5) // 计算5日均线
+    const ma10 = onCalculateMa(data, data.length - 1, 10) // 计算10日均线
+    const ma20 = onCalculateMa(data, data.length - 1, 20) // 计算20日均线
+    setMa({ ma5, ma10, ma20 })
+    setData(data)
+    setVisibleData(data.slice(0, props.data.length))
+    setViewRange({ start: 0, end: props.data.length, count: KDefaultProps.rangeCount, total: props.data.length })
+    ref.current = true
+  }, [])
 
   useEffect(() => {
     const current = maRef.current
@@ -46,27 +79,53 @@ const KLine: React.FC<IKProps> = (props: IKProps): ReactElement => {
     setSize({ width: props.width ?? 0, height: height < 0 ? 0 : height, maHeight: rect.height })
   }, [maRef])
 
-  useEffect(() => {
-    const data = props.data || []
-    if (data.length === 0) {
-      setMa({ ma5: '0.00', ma10: '0.00', ma20: '0.00' })
-      return
-    }
+  /**
+   * 获取更多数据
+   */
+  const onGetMoreData = (callback?: Function) => {
+    if (loadingMoreRef.current) return
 
-    const ma5 = onCalculateMa(data, data.length - 1, 5) // 计算5日均线
-    const ma10 = onCalculateMa(data, data.length - 1, 10) // 计算10日均线
-    const ma20 = onCalculateMa(data, data.length - 1, 20) // 计算20日均线
-    setMa({ ma5, ma10, ma20 })
-    setStartIndex(0)
-    setEndIndex(data.length)
-  }, [props.data || []])
+    console.log('On Get More Data ...')
+    loadingMoreRef.current = true
 
-  useEffect(() => {
-    if (startIndex < 10) {
-      console.log('fetch more data ...')
-      props.onGetMoreData?.()
+    const result = props.onGetMoreData?.()
+    if (result && typeof result.then === 'function') {
+      result.then(newData => {
+        console.log('get new data', newData.length)
+
+        if (!newData || newData.length === 0) {
+          loadingMoreRef.current = false
+          return
+        }
+
+        const allData = [...newData, ...data]
+        setData(allData)
+
+        const addedCount = newData.length
+        const start = viewRange.start + addedCount
+        const end = viewRange.end + addedCount
+        const count = viewRange.count
+        const total = viewRange.total
+        setViewRange({
+          start,
+          end,
+          count,
+          total
+        })
+
+        loadingMoreRef.current = false
+        callback?.(
+          {
+            start,
+            end,
+            count,
+            total
+          },
+          allData
+        )
+      })
     }
-  }, [startIndex])
+  }
 
   /**
    * 滚轴滚动事件
@@ -84,6 +143,7 @@ const KLine: React.FC<IKProps> = (props: IKProps): ReactElement => {
    * 双指外扩（Trackpad 缩放） | ctrlKey === true | 缩放（更敏感）
    */
   const onHandleWheel = (e: React.WheelEvent<SVGSVGElement>) => {
+    console.log(viewRange.start, viewRange.end, viewRange.count)
     // 隐藏十字准线和tooltip
     onMouseLeave()
 
@@ -108,40 +168,48 @@ const KLine: React.FC<IKProps> = (props: IKProps): ReactElement => {
   }
 
   const onProcessWheel = (deltaX: number, deltaY: number) => {
-    const visibleCount = endIndex - startIndex
-    const zoomStep = 0.2
-    const minCount = 25
-    const maxCount = props.data.length
+    const zoomStep = KDefaultProps.zoomStep
+    const maxCount = data.length
 
     // 判断操作类型：主方向为 X 是平移，主方向为 Y 是缩放
     const isPan = Math.abs(deltaX) > Math.abs(deltaY)
 
+    let zoomIn: boolean = false
     if (isPan) {
       // 左右滑动平移
-      const currentCount = endIndex - startIndex
       const isMac = /Mac/.test(navigator.platform)
-      const zoomIn = isMac ? deltaX < 0 : deltaY < 0
-      const newCount = zoomIn
-        ? Math.max(minCount, currentCount - zoomStep)
-        : Math.min(maxCount, currentCount + zoomStep)
-
-      const newStart = Math.max(0, endIndex - newCount)
-
-      setStartIndex(newStart)
-      setEndIndex(endIndex)
+      zoomIn = isMac ? deltaX < 0 : deltaY < 0
     } else {
-      // 📏 上下滑动缩放：从右向左（放大），左向右（缩小）
-      const zoomIn = deltaY < 0 // 向上/外扩 = 放大
-      let newVisibleCount = zoomIn
-        ? Math.max(25, visibleCount - zoomStep)
-        : Math.min(props.data.length, visibleCount + zoomStep)
+      // 上下滑动缩放：从右向左（放大），左向右（缩小）
+      zoomIn = deltaY < 0 // 向上/外扩 = 放大
+    }
 
-      // 🔒 固定 endIndex（右边对齐）
-      let newStart = Math.max(0, endIndex - newVisibleCount)
-      let newEnd = endIndex
+    const visibleCount = viewRange.end - viewRange.start
+    let newVisibleCount = zoomIn
+      ? Math.max(KDefaultProps.minCount, visibleCount - zoomStep)
+      : Math.min(maxCount, visibleCount + zoomStep)
 
-      setStartIndex(newStart)
-      setEndIndex(newEnd)
+    // 固定 endIndex（右边对齐）
+    const newStart = Math.max(0, viewRange.end - newVisibleCount)
+    const newData = data.slice(newStart, viewRange.end)
+
+    // 重新计算宽度
+    OnCalculateCandleWidth(newData)
+    setVisibleData(newData)
+    setViewRange(prev => {
+      return {
+        start: newStart,
+        end: prev.end,
+        count: prev.count,
+        total: prev.total
+      }
+    })
+
+    // 如果滑到左边极限并且不是在加载中
+    if (newStart <= 0) {
+      if (!loadingMoreRef.current) {
+        onGetMoreData()
+      }
     }
   }
 
@@ -343,14 +411,55 @@ const KLine: React.FC<IKProps> = (props: IKProps): ReactElement => {
     height: number,
     riseColor: string = '',
     fallColor: string = '',
-    flatColor: string = '',
-    candleWidth: number,
-    unitWidth: number,
-    data: Array<IKDataItemProps> = []
+    flatColor: string = ''
   ) => {
     if (!svgRef.current || data.length === 0) return
 
     const svgRect = svgRef.current.getBoundingClientRect()
+
+    if (draggable.current.isDragging) {
+      // 隐藏十字准线和tooltip
+      setCrossProps({ show: false, x: 0, y: 0, index: 0, yLeftLabel: '', yRightLabel: '' })
+      setTooltipProps({ show: false, x: 0, y: 0, data: [] })
+
+      const deltaX = e.clientX - draggable.current.lastX
+      draggable.current.lastX = e.clientX
+
+      const moveCount = Math.round((deltaX * KDefaultProps.dragSpeed) / unitWidth)
+      if (moveCount === 0) return
+
+      const total = viewRange.total
+      let newStart = viewRange.start - moveCount
+      let newEnd = viewRange.end - moveCount
+
+      // 边界判断
+      if (newStart < 0) {
+        newStart = 0
+        newEnd = newStart + total
+      }
+
+      if (newEnd > data.length) {
+        newEnd = data.length
+        newStart = data.length - total
+      }
+
+      // 自动触发加载更多数据
+      if (newStart < 1 && !loadingMoreRef.current) {
+        onGetMoreData()
+        return
+      }
+
+      const newData = data.slice(newStart, newEnd)
+      setViewRange({
+        ...viewRange,
+        start: newStart,
+        end: newEnd
+      })
+      setVisibleData(newData)
+      OnCalculateCandleWidth(newData)
+      return
+    }
+
     const rect = e.currentTarget.getBoundingClientRect()
     const mouseX = e.clientX - svgRect.left
 
@@ -359,7 +468,7 @@ const KLine: React.FC<IKProps> = (props: IKProps): ReactElement => {
     const clampedIndex = Math.max(0, Math.min(index, data.length - 1))
 
     // 获取这个蜡烛图的中心 X 坐标
-    const centerX = clampedIndex * unitWidth + candleWidth / 2
+    const centerX = clampedIndex * unitWidth + unitWidth / 2
     const yPoint = Utils.getPriceByYPosition(e.clientY - rect.top, yLabels, height)
     const yLeftLabel = yPoint === null ? '' : `${yPoint.toFixed(2)}`
     setCrossProps({
@@ -394,26 +503,46 @@ const KLine: React.FC<IKProps> = (props: IKProps): ReactElement => {
     }
   }
 
+  const onMouseDown = (e: React.MouseEvent<SVGSVGElement>) => {
+    draggable.current.isDragging = true
+    draggable.current.startX = e.clientX
+    draggable.current.lastX = e.clientX
+  }
+
   const onMouseLeave = () => {
+    draggable.current.isDragging = false
     setCrossProps({ show: false, x: 0, y: 0, index: 0, yLeftLabel: '', yRightLabel: '' })
     setTooltipProps({ show: false, x: 0, y: 0, data: [] })
+  }
+
+  const onMouseUp = () => {
+    draggable.current.isDragging = false
+  }
+
+  /**
+   * 计算蜡烛图的宽度
+   */
+  const OnCalculateCandleWidth = (data: Array<IKDataItemProps> = []) => {
+    if (data.length === 0) return
+
+    // 计算蜡烛宽度, 保留 80% 显示蜡烛，20% 留作间距
+    const unitWidth = props.width / data.length // 每个蜡烛等分宽度
+    const { barWidth } = Handler.getBarWidthAndX(-1, unitWidth, TimeKDefaultProps.barWidthScale)
+    setUnitWidth(unitWidth)
+    setCandleWidth(barWidth)
   }
 
   /**
    * 计算蜡烛图属性
    */
   const onCalculateCandleProps = (commonProps: { [K: string]: any } = {}) => {
-    // 计算蜡烛宽度, 保留 80% 显示蜡烛，40% 留作间距
-    const unitWidth = props.width / commonProps.data.length // 每个蜡烛等分宽度
-    const candleWidth = unitWidth * 0.8
     const padding = (commonProps.maxPrice - commonProps.minPrice) * 0.05
     const adjustedMax = commonProps.maxPrice + padding
     const adjustedMin = commonProps.minPrice - padding
     const priceRange = adjustedMax - adjustedMin
 
     const pixelPerPrice = commonProps.height / priceRange
-    const scaleY = (price: number) => (adjustedMax - price) * pixelPerPrice
-    return { unitWidth, candleWidth, scaleY }
+    return (price: number) => (adjustedMax - price) * pixelPerPrice
   }
 
   /**
@@ -457,12 +586,7 @@ const KLine: React.FC<IKProps> = (props: IKProps): ReactElement => {
   /**
    *  K 线图
    */
-  const getKLine = (
-    commonProps: { [K: string]: any } = {},
-    unitWidth: number,
-    candleWidth: number,
-    scaleY: Function
-  ) => {
+  const getKLine = (commonProps: { [K: string]: any } = {}, scaleY: Function) => {
     const { data, riseColor, fallColor } = commonProps
     if (data.length === 0) return null
 
@@ -471,7 +595,7 @@ const KLine: React.FC<IKProps> = (props: IKProps): ReactElement => {
     return (
       <svg width={size.width} height={size.height}>
         {data.map((item: IKDataItemProps, index: number) => {
-          const x = index * unitWidth + (unitWidth - candleWidth) / 2
+          const { x } = Handler.getBarWidthAndX(index, unitWidth, TimeKDefaultProps.barWidthScale)
           const open = item.open ?? 0
           const close = item.close ?? 0
           const yOpen = scaleY(open)
@@ -490,7 +614,7 @@ const KLine: React.FC<IKProps> = (props: IKProps): ReactElement => {
           const candleHeight = Math.max(Math.abs(yClose - yOpen), 2) // 保证最小高度为2px
 
           return (
-            <g key={item.timestamp}>
+            <g key={`${item.timestamp}-${index}`}>
               {/* 高低线 */}
               <line
                 x1={x + candleWidth / 2}
@@ -517,8 +641,6 @@ const KLine: React.FC<IKProps> = (props: IKProps): ReactElement => {
     prop: IShareLineKHighLowProps | undefined = {},
     highLow: number = 0,
     highLowIndex: number = -1,
-    unitWidth: number = 0,
-    candleWidth: number = 0,
     scaleY: Function,
     width: number,
     height: number,
@@ -533,7 +655,7 @@ const KLine: React.FC<IKProps> = (props: IKProps): ReactElement => {
     }
 
     const y = scaleY(highLow)
-    const x = highLowIndex * unitWidth + candleWidth / 2
+    const x = highLowIndex * unitWidth + unitWidth / 2
 
     // 计算文字大小
     const highestSize = Utils.onMeasureTextSize(`${highLow.toFixed(2)}`, commonProps.fontSize, commonProps.fontFamily)
@@ -686,9 +808,8 @@ const KLine: React.FC<IKProps> = (props: IKProps): ReactElement => {
   }
 
   const render = () => {
-    const visibleData = (props.data || []).slice(startIndex, endIndex)
     const commonProps = onCalculateXYPoints(visibleData)
-    const { unitWidth, candleWidth, scaleY } = onCalculateCandleProps(commonProps)
+    const scaleY = onCalculateCandleProps(commonProps)
     let height = size.height - commonProps.axisPadding - (commonProps.volume.show ? commonProps.volume.height || 0 : 0)
     if (height < 0) {
       height = 0
@@ -720,13 +841,12 @@ const KLine: React.FC<IKProps> = (props: IKProps): ReactElement => {
               commonProps.height,
               commonProps.riseColor,
               commonProps.fallColor,
-              commonProps.flatColor,
-              candleWidth,
-              unitWidth,
-              commonProps.data
+              commonProps.flatColor
             )
           }}
+          onMouseDown={onMouseDown}
           onMouseLeave={onMouseLeave}
+          onMouseUp={onMouseUp}
         >
           {HandleCommon.getCommon(
             {
@@ -758,7 +878,7 @@ const KLine: React.FC<IKProps> = (props: IKProps): ReactElement => {
         </svg>
 
         {/* K 线图 */}
-        {getKLine(commonProps, unitWidth, candleWidth, scaleY)}
+        {getKLine(commonProps, scaleY)}
 
         {/* 蜡烛图上的最高线 */}
         {getHighLowLine(
@@ -766,8 +886,6 @@ const KLine: React.FC<IKProps> = (props: IKProps): ReactElement => {
           props.high,
           commonProps.high,
           commonProps.highIndex,
-          unitWidth,
-          candleWidth,
           scaleY,
           size.width,
           height,
@@ -780,8 +898,6 @@ const KLine: React.FC<IKProps> = (props: IKProps): ReactElement => {
           props.low,
           commonProps.low,
           commonProps.lowIndex,
-          unitWidth,
-          candleWidth,
           scaleY,
           size.width,
           height,

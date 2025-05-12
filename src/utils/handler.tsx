@@ -495,6 +495,24 @@ const Handler = {
       hasHighest,
       hasBasic
     }
+  },
+
+  /**
+   * 计算成交量和蜡烛图中的宽度和坐标
+   */
+  getBarWidthAndX: (index: number, unitWidth: number, widthRatio = 0) => {
+    let ratio = widthRatio
+    if (ratio === 0) {
+      ratio = TimeKDefaultProps.barWidthScale
+    }
+
+    const barWidth = unitWidth * ratio
+    if (index === -1) {
+      return { x: 0, barWidth }
+    }
+
+    const x = index * unitWidth + (unitWidth - barWidth) / 2
+    return { x, barWidth }
   }
 }
 
@@ -615,7 +633,7 @@ const HandleCommon = {
     data: Array<IVolumeDataItemProps> = [],
     fontSize: number,
     fontFamily: string,
-    tradeMinutes: Array<number> = [],
+    tradeMinutes: Array<any> = [],
     prefixClassName: string = ''
   ) => {
     if (!volumeProps.show) return null
@@ -645,12 +663,10 @@ const HandleCommon = {
           data.map((item, index: number) => {
             const prevPrice = index > 0 ? data[index - 1].price : item.price
             const color = item.price >= prevPrice ? volumeProps.riseColor || '' : volumeProps.fallColor || ''
-            const barWidth = props.width / tradeMinutes.length
+            const unitWidth = props.width / tradeMinutes.length
+            const { x, barWidth } = Handler.getBarWidthAndX(index, unitWidth, TimeKDefaultProps.barWidthScale)
             const barHeight = (item.volume / maxVolume) * volumeHeight
-            const timeIndex = Utils.getTimeIndexByMinute(item.timestamp, tradeMinutes)
-            if (timeIndex === -1) return null
 
-            const x = timeIndex * barWidth
             return (
               <Volume
                 key={index}
@@ -685,7 +701,7 @@ const HandleCommon = {
     xPoints: Array<{ [K: string]: any }> = [],
     yPoints: Array<{ [K: string]: any }> = [],
     yAmplitudes: Array<string> = [],
-    tradeMinutes: Array<number> = [],
+    tradeMinutes: Array<any> = [],
     crossProps: { [K: string]: any } = {},
     fontSize: number = 0,
     fontFamily: string = '',

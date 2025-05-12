@@ -166,7 +166,7 @@ export interface IShareProps {
   flatColor?: string // 持平颜色
   fontSize?: number // 字体大小
   fontFamily?: string // 字体名称
-  onGetMoreData?: () => void
+  onGetMoreData?: () => Promise<Array<IKDataItemProps>>
 }
 
 // 均线, 5日、10日、20日

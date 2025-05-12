@@ -52,7 +52,7 @@ const Highest: React.FC<IShareHighestProps> = (props: IShareHighestProps) => {
         {!props.hasHighest && (
           <text
             x={textX}
-            y={y - height}
+            y={y + height}
             fill={textColor}
             textAnchor="end"
             fontSize={props.fontSize}

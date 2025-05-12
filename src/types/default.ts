@@ -12,7 +12,16 @@ export const TimeKDefaultProps = {
   defaultColor: '#6b89f2',
   flatColor: '#888888',
   fontSize: 12, //  默认字体大小
-  fontFamily: 'Arial' // 默认字体名称
+  fontFamily: 'Arial', // 默认字体名称
+  barWidthScale: 0.8 // 成交量柱状图和k线图的宽度比例,保留 80% 显示，20% 留作间距
+}
+
+// K 线图默认属性
+export const KDefaultProps = {
+  minCount: 25, // 展示最小的数量
+  zoomStep: 0.5, // 滚轴滚动的最小步
+  dragSpeed: 0.5, // 每拖动10px，平移多少个数据点
+  rangeCount: 30 // 区间显示的数量
 }
 
 // 网格背景默认属性
