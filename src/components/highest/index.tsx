@@ -67,7 +67,7 @@ const Highest: React.FC<IShareHighestProps> = (props: IShareHighestProps) => {
         {!props.hasHighest && !Utils.isBlank(amplitude || '') && needAnotherSide && (
           <text
             x={props.isAxisLeft ? getLabelRightPadding(props.width) : getLabelLeftPadding(amplitudeWidth)}
-            y={y - height}
+            y={y + height}
             fill={textColor}
             textAnchor="end"
             fontSize={props.fontSize}
