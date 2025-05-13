@@ -1,15 +1,26 @@
 # Time K Line
-  分时图、K线图, 使用 `svg` 绘制, 功能包括 `基准线`、`最高线`、`十字准线`、`成交量柱状图`、`MA`、`Tooltip`, `K 线图` 支持 `平移`、`滚轴缩放`、`双指向上、向下、向左、向右缩放(MacOS)`
+  分时图、K线图, 使用 `svg` 绘制, 功能包括 `基准线`、`最高线`、`十字准线`、`成交量柱状图`、`MA`、`Tooltip`, `K 线图` 。
+  - PC 端
+    支持 `平移`、`滚轴缩放`、`双指向上、向下、向左、向右缩放(MacOS)`
+  - 手机端
+    支持 `单指向左、向右平移`、`单指向上、向下缩放`
 
 ## Prerequisites
   需要安装 `tailwindcss`, 请查看官方文档。
 
-## Preview
+## PC Preview
   ![](./screenshots/1.jpeg)
   ![](./screenshots/2.png)
   ![](./screenshots/3.png)
   ![](./screenshots/4.png)
   ![](./screenshots/5.png)
+
+## Mobile Preview
+  ![](./screenshots/6.png)
+  ![](./screenshots/7.png)
+  ![](./screenshots/8.png)
+  ![](./screenshots/9.png)
+  ![](./screenshots/10.png)
 
 ## Usage
 

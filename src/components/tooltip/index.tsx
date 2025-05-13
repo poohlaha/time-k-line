@@ -57,7 +57,7 @@ const Tooltip: React.FC<IShareTooltipProps> = (props: PropsWithChildren<IShareTo
       : props.fontClassName || ''
     return ReactDOM.createPortal(
       <div
-        className={`${props.prefixClassName || ''}-tooltip ${className || ''} p-2 absolute w-40 rounded shadow-lg z-50 ${fontClassName || ''}`}
+        className={`${props.prefixClassName || ''}-tooltip ${className || ''} p-2 absolute hidden md:block w-40 rounded shadow-lg z-50 ${fontClassName || ''}`}
         style={{
           left: point.x,
           top: point.y,

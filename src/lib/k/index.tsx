@@ -51,6 +51,14 @@ const KLine: React.FC<IKProps> = (props: IKProps): ReactElement => {
     lastX: 0
   })
 
+  const touchRef = useRef({
+    startX: 0,
+    lastX: 0,
+    startY: 0,
+    lastY: 0,
+    mode: 'none' as 'none' | 'pan' | 'zoom'
+  })
+
   useEffect(() => {
     if (ref.current) return
 
@@ -143,7 +151,6 @@ const KLine: React.FC<IKProps> = (props: IKProps): ReactElement => {
    * 双指外扩（Trackpad 缩放） | ctrlKey === true | 缩放（更敏感）
    */
   const onHandleWheel = (e: React.WheelEvent<SVGSVGElement>) => {
-    console.log(viewRange.start, viewRange.end, viewRange.count)
     // 隐藏十字准线和tooltip
     onMouseLeave()
 
@@ -173,7 +180,6 @@ const KLine: React.FC<IKProps> = (props: IKProps): ReactElement => {
 
     // 判断操作类型：主方向为 X 是平移，主方向为 Y 是缩放
     const isPan = Math.abs(deltaX) > Math.abs(deltaY)
-
     let zoomIn: boolean = false
     if (isPan) {
       // 左右滑动平移
@@ -420,6 +426,85 @@ const KLine: React.FC<IKProps> = (props: IKProps): ReactElement => {
     return tooltipData
   }
 
+  /**
+   * 平移
+   */
+  const onMove = (deltaX: number = 0) => {
+    const moveCount = Math.round((deltaX * KDefaultProps.dragSpeed) / unitWidth)
+    if (moveCount === 0) return
+
+    const total = viewRange.total
+    let newStart = viewRange.start - moveCount
+    let newEnd = viewRange.end - moveCount
+
+    // 边界判断
+    if (newStart < 0) {
+      newStart = 0
+      newEnd = newStart + total
+    }
+
+    if (newEnd > data.length) {
+      newEnd = data.length
+      newStart = data.length - total
+    }
+
+    // 自动触发加载更多数据
+    if (newStart < 1 && !loadingMoreRef.current) {
+      onGetMoreData()
+      return
+    }
+
+    const newData = data.slice(newStart, newEnd)
+    setViewRange({
+      ...viewRange,
+      start: newStart,
+      end: newEnd
+    })
+    setVisibleData(newData)
+    OnCalculateCandleWidth(newData)
+  }
+
+  const onMoveData = (
+    rect: { [K: string]: any } = {},
+    mouseX: number = 0,
+    mouseY: number = 0,
+    yLabels: Array<number>,
+    height: number,
+    needCross: boolean = true
+  ) => {
+    // 计算落在哪个蜡烛图上
+    const index = Math.floor(mouseX / unitWidth)
+    const clampedIndex = Math.max(0, Math.min(index, data.length - 1))
+
+    // 获取这个蜡烛图的中心 X 坐标
+    const centerX = clampedIndex * unitWidth + unitWidth / 2
+    const yPoint = Utils.getPriceByYPosition(mouseY - rect.top, yLabels, height)
+    const yLeftLabel = yPoint === null ? '' : `${yPoint.toFixed(2)}`
+
+    if (needCross) {
+      setCrossProps({
+        show: true,
+        x: centerX,
+        y: mouseY - rect.top,
+        index,
+        yLeftLabel,
+        yRightLabel: yLeftLabel
+      })
+    }
+
+    if (index < 0 || index >= data.length) {
+      // setTooltipProps({ show: false, x: 0, y: 0, data: [] })
+      return -1
+    }
+
+    // 计算对应 index 的 MA 值
+    const ma5 = onCalculateMa(data, clampedIndex, 5)
+    const ma10 = onCalculateMa(data, clampedIndex, 10)
+    const ma20 = onCalculateMa(data, clampedIndex, 20)
+    setMa({ ma5, ma10, ma20 })
+    return index
+  }
+
   const onMouseMove = (
     e: React.MouseEvent<SVGSVGElement>,
     tooltip: IShareTooltipProps,
@@ -430,7 +515,6 @@ const KLine: React.FC<IKProps> = (props: IKProps): ReactElement => {
     flatColor: string = ''
   ) => {
     if (!svgRef.current || data.length === 0) return
-
     const svgRect = svgRef.current.getBoundingClientRect()
 
     if (draggable.current.isDragging) {
@@ -441,71 +525,16 @@ const KLine: React.FC<IKProps> = (props: IKProps): ReactElement => {
       const deltaX = e.clientX - draggable.current.lastX
       draggable.current.lastX = e.clientX
 
-      const moveCount = Math.round((deltaX * KDefaultProps.dragSpeed) / unitWidth)
-      if (moveCount === 0) return
-
-      const total = viewRange.total
-      let newStart = viewRange.start - moveCount
-      let newEnd = viewRange.end - moveCount
-
-      // 边界判断
-      if (newStart < 0) {
-        newStart = 0
-        newEnd = newStart + total
-      }
-
-      if (newEnd > data.length) {
-        newEnd = data.length
-        newStart = data.length - total
-      }
-
-      // 自动触发加载更多数据
-      if (newStart < 1 && !loadingMoreRef.current) {
-        onGetMoreData()
-        return
-      }
-
-      const newData = data.slice(newStart, newEnd)
-      setViewRange({
-        ...viewRange,
-        start: newStart,
-        end: newEnd
-      })
-      setVisibleData(newData)
-      OnCalculateCandleWidth(newData)
+      onMove(deltaX)
       return
     }
 
     const rect = e.currentTarget.getBoundingClientRect()
     const mouseX = e.clientX - svgRect.left
+    const mouseY = e.clientY
 
-    // 计算落在哪个蜡烛图上
-    const index = Math.floor(mouseX / unitWidth)
-    const clampedIndex = Math.max(0, Math.min(index, data.length - 1))
-
-    // 获取这个蜡烛图的中心 X 坐标
-    const centerX = clampedIndex * unitWidth + unitWidth / 2
-    const yPoint = Utils.getPriceByYPosition(e.clientY - rect.top, yLabels, height)
-    const yLeftLabel = yPoint === null ? '' : `${yPoint.toFixed(2)}`
-    setCrossProps({
-      show: true,
-      x: centerX,
-      y: e.clientY - rect.top,
-      index,
-      yLeftLabel,
-      yRightLabel: yLeftLabel
-    })
-
-    if (index < 0 || index >= data.length) {
-      // setTooltipProps({ show: false, x: 0, y: 0, data: [] })
-      return
-    }
-
-    // 计算对应 index 的 MA 值
-    const ma5 = onCalculateMa(data, clampedIndex, 5)
-    const ma10 = onCalculateMa(data, clampedIndex, 10)
-    const ma20 = onCalculateMa(data, clampedIndex, 20)
-    setMa({ ma5, ma10, ma20 })
+    const index = onMoveData(rect, mouseX, mouseY, yLabels, height)
+    if (index === -1) return
 
     const item = data[index]
     const tooltipData = getTooltipData(item, riseColor, fallColor, flatColor)
@@ -533,6 +562,67 @@ const KLine: React.FC<IKProps> = (props: IKProps): ReactElement => {
 
   const onMouseUp = () => {
     draggable.current.isDragging = false
+  }
+
+  const onTouchStart = (e: React.TouchEvent<SVGSVGElement>) => {
+    onMouseLeave()
+    if (e.touches.length !== 1) return
+    const touch = e.touches[0]
+    touchRef.current.startX = touch.clientX
+    touchRef.current.startY = touch.clientY
+    touchRef.current.lastX = touch.clientX
+    touchRef.current.mode = 'none'
+  }
+
+  const onTouchMove = (e: React.TouchEvent<SVGSVGElement>, yLabels: Array<number>, height: number) => {
+    const touches = e.touches || []
+    if (!svgRef.current || data.length === 0 || touches.length !== 1) return
+
+    const touch = e.touches[0]
+    const deltaX = touch.clientX - touchRef.current.lastX
+    const deltaY = touch.clientY - touchRef.current.startY
+
+    const absDeltaX = Math.abs(deltaX)
+    const absDeltaY = Math.abs(deltaY)
+
+    // 判断当前模式
+    if (touchRef.current.mode === 'none') {
+      if (absDeltaX > absDeltaY) {
+        touchRef.current.mode = 'pan'
+      } else {
+        touchRef.current.mode = 'zoom'
+      }
+    }
+
+    console.log('mode', touchRef.current.mode)
+
+    // 平移
+    if (touchRef.current.mode === 'pan') {
+      touchRef.current.lastX = touch.clientX
+      onMove(deltaX)
+      return
+    }
+
+    // 缩放, 上下移动双指
+    if (touchRef.current.mode === 'zoom') {
+      onProcessWheel(deltaX, deltaY)
+      touchRef.current.startY = touch.clientY
+    }
+
+    const rect = e.currentTarget.getBoundingClientRect()
+    const mouseX = touch.clientX - rect.left
+    const mouseY = touch.clientY - rect.top
+    onMoveData(rect, mouseX, mouseY, yLabels, height, false)
+  }
+
+  const onTouchEnd = () => {
+    touchRef.current = {
+      startX: 0,
+      lastX: 0,
+      startY: 0,
+      lastY: 0,
+      mode: 'none' as 'none' | 'pan' | 'zoom'
+    }
   }
 
   /**
@@ -691,9 +781,7 @@ const KLine: React.FC<IKProps> = (props: IKProps): ReactElement => {
     const strokeDasharray = lineType === 'dashed' ? '4 2' : 'none'
     const lineStartX = drawLeft ? x - lineWidth + 1 : x
     const lineEndX = drawLeft ? x + 1 : x + lineWidth
-    const textX = drawLeft
-      ? lineStartX - highestSize.width / 2 - margin
-      : lineEndX + highestSize.width / 2 + margin
+    const textX = drawLeft ? lineStartX - highestSize.width / 2 - margin : lineEndX + highestSize.width / 2 + margin
     const circleX = drawLeft ? lineStartX : lineEndX
     return (
       <svg
@@ -738,7 +826,7 @@ const KLine: React.FC<IKProps> = (props: IKProps): ReactElement => {
     if (!tooltip.show || !tooltipProps.show) return null
 
     let className = tooltip.className || ''
-    className += ' k-chart-tooltip'
+    className += ' k-chart-tooltip '
     return (
       <Tooltip
         {...tooltip}
@@ -863,6 +951,11 @@ const KLine: React.FC<IKProps> = (props: IKProps): ReactElement => {
           onMouseDown={onMouseDown}
           onMouseLeave={onMouseLeave}
           onMouseUp={onMouseUp}
+          onTouchStart={onTouchStart}
+          onTouchMove={e => {
+            onTouchMove(e, commonProps.yLabels, commonProps.height)
+          }}
+          onTouchEnd={onTouchEnd}
         >
           {HandleCommon.getCommon(
             {

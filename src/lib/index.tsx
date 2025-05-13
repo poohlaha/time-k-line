@@ -29,7 +29,7 @@ const ShareLine: React.FC<IShareLineProps> = (props: IShareLineProps): ReactElem
     const height = rect.height - tabRect.height
     setSize({ width: rect.width ?? 0, height: rect.height })
     setTimeKSize({ width: rect.width ?? 0, height: height < 0 ? 0 : height })
-  }, [ref, tabsRef])
+  }, [ref, tabsRef, props.width, props.height])
 
   useEffect(() => {
     const commonProps = getCommonProps()
