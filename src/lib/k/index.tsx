@@ -90,7 +90,7 @@ const KLine: React.FC<IKProps> = (props: IKProps): ReactElement => {
   /**
    * 获取更多数据
    */
-  const onGetMoreData = (callback?: Function) => {
+  const onGetMoreData = () => {
     if (loadingMoreRef.current) return
 
     console.log('On Get More Data ...')
@@ -122,15 +122,27 @@ const KLine: React.FC<IKProps> = (props: IKProps): ReactElement => {
         })
 
         loadingMoreRef.current = false
-        callback?.(
-          {
-            start,
-            end,
-            count,
-            total
-          },
-          allData
-        )
+      })
+    }
+  }
+
+  const onWheel = (deltaX: number, deltaY: number) => {
+    if (!wheelDeltaRef.current) {
+      wheelDeltaRef.current = { deltaX, deltaY }
+    } else {
+      wheelDeltaRef.current.deltaX += deltaX
+      wheelDeltaRef.current.deltaY += deltaY
+    }
+
+    if (!tickingRef.current) {
+      tickingRef.current = true
+      requestAnimationFrame(() => {
+        const deltas = wheelDeltaRef.current
+        if (deltas) {
+          onProcessWheel(deltas.deltaX, deltas.deltaY)
+          wheelDeltaRef.current = null
+        }
+        tickingRef.current = false
       })
     }
   }
@@ -153,25 +165,7 @@ const KLine: React.FC<IKProps> = (props: IKProps): ReactElement => {
   const onHandleWheel = (e: React.WheelEvent<SVGSVGElement>) => {
     // 隐藏十字准线和tooltip
     onMouseLeave()
-
-    if (!wheelDeltaRef.current) {
-      wheelDeltaRef.current = { deltaX: e.deltaX, deltaY: e.deltaY }
-    } else {
-      wheelDeltaRef.current.deltaX += e.deltaX
-      wheelDeltaRef.current.deltaY += e.deltaY
-    }
-
-    if (!tickingRef.current) {
-      tickingRef.current = true
-      requestAnimationFrame(() => {
-        const deltas = wheelDeltaRef.current
-        if (deltas) {
-          onProcessWheel(deltas.deltaX, deltas.deltaY)
-          wheelDeltaRef.current = null
-        }
-        tickingRef.current = false
-      })
-    }
+    onWheel(e.deltaX, e.deltaY)
   }
 
   const onProcessWheel = (deltaX: number, deltaY: number) => {
@@ -274,6 +268,10 @@ const KLine: React.FC<IKProps> = (props: IKProps): ReactElement => {
         }
 
         // 保证最后一个也被加进去
+        if (xLabels.length === verticalLines) {
+          xLabels.slice(0, xLabels.length - 2)
+        }
+
         if (labels[labels.length - 1]?.index !== data.length - 1) {
           const last = data[data.length - 1]
           xLabels.push(dayjs(last.timestamp ?? 0).format('YYYY-MM-DD'))
@@ -605,7 +603,7 @@ const KLine: React.FC<IKProps> = (props: IKProps): ReactElement => {
 
     // 缩放, 上下移动双指
     if (touchRef.current.mode === 'zoom') {
-      onProcessWheel(deltaX, deltaY)
+      onWheel(deltaX, deltaY)
       touchRef.current.startY = touch.clientY
     }
 
