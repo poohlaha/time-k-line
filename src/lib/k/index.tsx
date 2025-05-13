@@ -364,20 +364,36 @@ const KLine: React.FC<IKProps> = (props: IKProps): ReactElement => {
 
     // 计算涨跌额 | 涨跌幅
     if (closingPrice > 0) {
+      const obj = Handler.onCalculateRiseFall(data.riseFall, data.amplitude, riseColor, fallColor, flatColor) || {}
       // 涨跌额 = 收盘价 - 开盘价
       const curPrice = close - open
       // 涨跌幅 = (涨跌额 / 开盘价) × 100%
       const { riseAndFall, amplitude } = Utils.onCalculateRiseAndFall(close, open)
+
+      let riseFall = obj.riseFall
+      let amp = obj.amplitude
+      let rfColor = obj.rfColor || ''
+      let ampColor = obj.ampColor || ''
+      if (riseFall === undefined) {
+        riseFall = `${curPrice > 0 ? '+' : ''}${curPrice.toFixed(2)}`
+        rfColor = curPrice > 0 ? riseColor : curPrice === 0 ? flatColor : fallColor
+      }
+
+      if (amp === undefined) {
+        amp = amplitude || ''
+        ampColor = riseAndFall > 0 ? riseColor : curPrice === 0 ? flatColor : fallColor
+      }
+
       tooltipData.push({
         label: '涨跌额',
-        value: `${curPrice > 0 ? '+' : ''}${curPrice.toFixed(2)}`,
-        color: curPrice > 0 ? riseColor : curPrice === 0 ? flatColor : fallColor
+        value: riseFall,
+        color: rfColor
       })
 
       tooltipData.push({
         label: '涨跌幅',
-        value: amplitude,
-        color: riseAndFall > 0 ? riseColor : curPrice === 0 ? flatColor : fallColor
+        value: amp,
+        color: ampColor
       })
     }
 
@@ -676,8 +692,8 @@ const KLine: React.FC<IKProps> = (props: IKProps): ReactElement => {
     const lineStartX = drawLeft ? x - lineWidth + 1 : x
     const lineEndX = drawLeft ? x + 1 : x + lineWidth
     const textX = drawLeft
-      ? lineStartX - highestSize.width / 2 - margin / 2
-      : lineEndX + highestSize.width / 2 + margin / 2
+      ? lineStartX - highestSize.width / 2 - margin
+      : lineEndX + highestSize.width / 2 + margin
     const circleX = drawLeft ? lineStartX : lineEndX
     return (
       <svg

@@ -9,11 +9,33 @@ export const TimeKDefaultProps = {
   prefixClassName: 'time-k',
   riseColor: '#f44336',
   fallColor: '#037B66',
-  defaultColor: '#6b89f2',
+  defaultColor: '#999999',
   flatColor: '#888888',
   fontSize: 12, //  默认字体大小
   fontFamily: 'Arial', // 默认字体名称
-  barWidthScale: 0.8 // 成交量柱状图和k线图的宽度比例,保留 80% 显示，20% 留作间距
+  barWidthScale: 0.8, // 成交量柱状图和k线图的宽度比例,保留 80% 显示，20% 留作间距，
+  tabs: [
+    {
+      label: '分时',
+      value: 'time'
+    },
+    {
+      label: '五日',
+      value: 'five'
+    },
+    {
+      label: '日K',
+      value: 'dailyK'
+    },
+    {
+      label: '周K',
+      value: 'weekK'
+    },
+    {
+      label: '月K',
+      value: 'monthK'
+    }
+  ]
 }
 
 // K 线图默认属性

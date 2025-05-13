@@ -16,6 +16,7 @@ import { ITimeKProps, ITimeDataItemProps } from './share'
  * ]
  */
 export interface ITimeProps extends ITimeKProps {
+  isFive?: boolean
   data: Array<ITimeDataItemProps> // 数据
   tradeTimes?: Array<string> // 交易时间段, 如要更改, 请同时更改 xLabels 的值
 }

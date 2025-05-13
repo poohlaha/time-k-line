@@ -14,13 +14,11 @@ import { ITimeProps } from '../types/time'
 import { IKProps } from '../types/k'
 
 const ShareLine: React.FC<IShareLineProps> = (props: IShareLineProps): ReactElement => {
-  const [tabActiveItem, setTabActiveItem] = useState<{ [K: string]: any }>({ key: '', label: '' })
+  const [tabActiveItem, setTabActiveItem] = useState<{ [K: string]: any }>({ value: '', label: '' })
   const [_, setSize] = useState<{ [K: string]: any }>({ width: 0, height: 0 })
   const [timeKSize, setTimeKSize] = useState<{ [K: string]: any }>({ width: 0, height: 0 })
   const ref = useRef<HTMLDivElement>(null)
   const tabsRef = useRef<HTMLDivElement>(null)
-
-  const TabKeys: Array<string> = ['time', 'dailyK', 'weekK', 'monthK']
 
   useEffect(() => {
     const current = ref.current
@@ -49,82 +47,42 @@ const ShareLine: React.FC<IShareLineProps> = (props: IShareLineProps): ReactElem
       item = labels[activeIndex] || {}
     }
 
-    setTabActiveItem({ key: item.key || '', label: item.label || '' })
+    setTabActiveItem({ value: item.value || '', label: item.label || '' })
   }, [props.tabs?.activeIndex ?? 0])
 
   /**
    * 获取 分时图 属性
    */
-  const getTimeProps = () => {
-    const time = props.time
-    if (time === undefined) {
+  const getTimeProps = (time: IShareLineTimeProps | undefined | null, isFive: boolean = false) => {
+    if (time === undefined || time === null) {
       return null
     }
 
-    const title = Utils.isBlank(time.title || '') ? DefaultShareLineProps.timeTitle : time.title || ''
-    const data = time.data || []
-    const tradeTimes = time.tradeTimes || []
+    const show = time.show ?? true
+    if (!show) {
+      return null
+    }
+
     return {
-      title,
-      data,
-      tradeTimes
+      title: time.title || '',
+      ...(time || ''),
+      isFive
     } as IShareLineTimeProps
   }
 
   /**
-   * 获取 日K 图 属性
+   * 获取 K 线图 属性
    */
-  const getDailyKProps = () => {
-    const dailyK = props.dailyK
-    if (dailyK === undefined) {
+  const getKProps = (kProps: IShareLineKProps | undefined | null) => {
+    if (kProps === undefined || kProps === null) {
       return null
     }
 
-    const title = Utils.isBlank(dailyK.title || '') ? DefaultShareLineProps.dailyTitle : dailyK.title || ''
-    const data = dailyK.data || []
-    const onGetMoreData = dailyK.onGetMoreData
+    const show = kProps.show ?? true
+    if (!show) return null
+
     return {
-      title,
-      data,
-      onGetMoreData
-    } as IShareLineKProps
-  }
-
-  /**
-   * 获取 周K 图 属性
-   */
-  const getWeekKProps = () => {
-    const weekK = props.weekK
-    if (weekK === undefined) {
-      return null
-    }
-
-    const title = Utils.isBlank(weekK.title || '') ? DefaultShareLineProps.weekTitle : weekK.title || ''
-    const data = weekK.data || []
-    const onGetMoreData = weekK.onGetMoreData
-    return {
-      title,
-      data,
-      onGetMoreData
-    } as IShareLineKProps
-  }
-
-  /**
-   * 获取 月K 图 属性
-   */
-  const getMonthKProps = () => {
-    const monthK = props.monthK
-    if (monthK === undefined) {
-      return null
-    }
-
-    const title = Utils.isBlank(monthK.title || '') ? DefaultShareLineProps.monthTitle : monthK.title || ''
-    const data = monthK.data || []
-    const onGetMoreData = monthK.onGetMoreData
-    return {
-      title,
-      data,
-      onGetMoreData
+      ...(kProps || {})
     } as IShareLineKProps
   }
 
@@ -162,30 +120,52 @@ const ShareLine: React.FC<IShareLineProps> = (props: IShareLineProps): ReactElem
   const getTabsLabels = (commonProps: IShareLineProps = {}) => {
     let labels: Array<{ [K: string]: any }> = []
     if (commonProps.time !== null && commonProps.time !== undefined) {
+      const label = Utils.isBlank(commonProps.time.title || '')
+        ? TimeKDefaultProps.tabs[0].label || ''
+        : commonProps.time.title || ''
       labels.push({
-        label: commonProps.time.title || '',
-        key: TabKeys[0] || ''
+        label,
+        value: TimeKDefaultProps.tabs[0].value || ''
+      })
+    }
+
+    if (commonProps.fiveTime !== null && commonProps.fiveTime !== undefined) {
+      const label = Utils.isBlank(commonProps.fiveTime.title || '')
+        ? TimeKDefaultProps.tabs[1].label || ''
+        : commonProps.fiveTime.title || ''
+      labels.push({
+        label,
+        value: TimeKDefaultProps.tabs[1].value || ''
       })
     }
 
     if (commonProps.dailyK !== null && commonProps.dailyK !== undefined) {
+      const label = Utils.isBlank(commonProps.dailyK.title || '')
+        ? TimeKDefaultProps.tabs[2].label || ''
+        : commonProps.dailyK.title || ''
       labels.push({
-        label: commonProps.dailyK.title || '',
-        key: TabKeys[1] || ''
+        label,
+        value: TimeKDefaultProps.tabs[2].value || ''
       })
     }
 
     if (commonProps.weekK !== null && commonProps.weekK !== undefined) {
+      const label = Utils.isBlank(commonProps.weekK.title || '')
+        ? TimeKDefaultProps.tabs[3].label || ''
+        : commonProps.weekK.title || ''
       labels.push({
-        label: commonProps.weekK.title || '',
-        key: TabKeys[2] || ''
+        label,
+        value: TimeKDefaultProps.tabs[3].value || ''
       })
     }
 
     if (commonProps.monthK !== null && commonProps.monthK !== undefined) {
+      const label = Utils.isBlank(commonProps.monthK.title || '')
+        ? TimeKDefaultProps.tabs[4].label || ''
+        : commonProps.monthK.title || ''
       labels.push({
-        label: commonProps.monthK.title || '',
-        key: TabKeys[3] || ''
+        label,
+        value: TimeKDefaultProps.tabs[4].value || ''
       })
     }
 
@@ -211,10 +191,10 @@ const ShareLine: React.FC<IShareLineProps> = (props: IShareLineProps): ReactElem
           {labels.map((item: { [K: string]: any } = {}, index: number) => {
             return (
               <div
-                className={`${commonProps.prefixClassName || ''}-share-tabs-item flex-1 flex items-center justify-center cursor-pointer ${tabActiveItem.key === item.key ? `${tabs.activeClassName || ''} ${tabs.activeTextColor || ''}` : ''}`}
-                key={item.key}
+                className={`${commonProps.prefixClassName || ''}-share-tabs-item flex-1 flex items-center justify-center cursor-pointer ${tabActiveItem.value === item.value ? `${tabs.activeClassName || ''} ${tabs.activeTextColor || ''}` : ''}`}
+                key={item.value}
                 onClick={() => {
-                  if (tabActiveItem.key === item.key) return
+                  if (tabActiveItem.value === item.value) return
                   setTabActiveItem(item)
                   tabs.onTabClick?.(index, item)
                 }}
@@ -232,10 +212,11 @@ const ShareLine: React.FC<IShareLineProps> = (props: IShareLineProps): ReactElem
    * 获取公共属性
    */
   const getCommonProps = () => {
-    const time = getTimeProps()
-    const dailyK = getDailyKProps()
-    const weekK = getWeekKProps()
-    const monthK = getMonthKProps()
+    const time = getTimeProps(props.time, false)
+    const fiveTime = getTimeProps(props.fiveTime, true)
+    const dailyK = getKProps(props.dailyK)
+    const weekK = getKProps(props.weekK)
+    const monthK = getKProps(props.monthK)
     const tabs = getTabsProps()
 
     const prefixClassName = Handler.getPrefixClassName(props.prefixClassName || '')
@@ -249,6 +230,7 @@ const ShareLine: React.FC<IShareLineProps> = (props: IShareLineProps): ReactElem
       width,
       height,
       time,
+      fiveTime,
       dailyK,
       weekK,
       monthK,
@@ -304,20 +286,15 @@ const ShareLine: React.FC<IShareLineProps> = (props: IShareLineProps): ReactElem
   /**
    * 获取分时图
    */
-  const getTimeLine = (commonProps: IShareLineProps = {}) => {
-    const time = commonProps.time
+  const getTimeFiveLine = (commonProps: IShareLineProps = {}, time: IShareLineTimeProps | undefined) => {
     if (time === null || time === undefined) {
       return null
     }
 
-    const className = time.className || ''
-    const data = time.data || []
-    const tradeTimes = time.tradeTimes || []
     const timeProps: ITimeProps = {
       ...getTimeKProps(commonProps),
-      className,
-      data,
-      tradeTimes
+      ...(time || {}),
+      isFive: time.isFive
     }
 
     return <TimeLine {...timeProps} />
@@ -326,15 +303,14 @@ const ShareLine: React.FC<IShareLineProps> = (props: IShareLineProps): ReactElem
   /**
    * 获取日 K 图
    */
-  const getDailyKLine = (commonProps: IShareLineProps = {}) => {
-    const dailyK = commonProps.dailyK
-    if (dailyK === null || dailyK === undefined) {
+  const getDailyKLine = (commonProps: IShareLineProps = {}, kProps: IShareLineKProps | undefined) => {
+    if (kProps === null || kProps === undefined) {
       return null
     }
 
     const timeProps: IKProps = {
       ...getTimeKProps(commonProps),
-      ...(dailyK || {})
+      ...(kProps || {})
     }
 
     return <KLine {...timeProps} />
@@ -356,10 +332,20 @@ const ShareLine: React.FC<IShareLineProps> = (props: IShareLineProps): ReactElem
 
         <div className={`${commonProps.prefixClassName}-share-chart-content flex-1 `}>
           {/* 分时图 */}
-          {tabActiveItem.key === TabKeys[0] && getTimeLine(commonProps)}
+          {tabActiveItem.value === TimeKDefaultProps.tabs[0].value && getTimeFiveLine(commonProps, commonProps.time)}
+
+          {/* 五日 */}
+          {tabActiveItem.value === TimeKDefaultProps.tabs[1].value &&
+            getTimeFiveLine(commonProps, commonProps.fiveTime)}
 
           {/* 日 K 图*/}
-          {tabActiveItem.key === TabKeys[1] && getDailyKLine(commonProps)}
+          {tabActiveItem.value === TimeKDefaultProps.tabs[2].value && getDailyKLine(commonProps, commonProps.dailyK)}
+
+          {/* 周 K 图*/}
+          {tabActiveItem.value === TimeKDefaultProps.tabs[3].value && getDailyKLine(commonProps, commonProps.weekK)}
+
+          {/* 月 K 图*/}
+          {tabActiveItem.value === TimeKDefaultProps.tabs[4].value && getDailyKLine(commonProps, commonProps.monthK)}
         </div>
       </div>
     )

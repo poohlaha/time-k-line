@@ -22,7 +22,15 @@ const TimeLine: React.FC<ITimeProps> = (props: ITimeProps): ReactElement => {
    */
   const getTradeMinutes = () => {
     let tradTimes = props.tradeTimes || []
-    if (tradTimes.length === 0) {
+    const isFive = props.isFive
+    if (isFive) {
+      if (tradTimes.length === 0) {
+        const data = props.data || []
+        if (data.length > 0) {
+          return data.map((d: ITimeDataItemProps) => d.timestamp ?? 0)
+        }
+      }
+    } else if (tradTimes.length === 0) {
       tradTimes = TRADE_TIMES || []
     }
 
@@ -72,7 +80,7 @@ const TimeLine: React.FC<ITimeProps> = (props: ITimeProps): ReactElement => {
       const points = data
         .map((d, _) => {
           const price = d.price ?? 0
-          const index = Utils.getTimeIndexByMinute(d.timestamp ?? 0, tradeMinutes)
+          const index = Utils.getTimeIndexByMinute(d.timestamp ?? 0, tradeMinutes, props.isFive ?? false)
           if (index === -1) return null
 
           const x = (index / tradeMinutes.length) * width
@@ -95,8 +103,8 @@ const TimeLine: React.FC<ITimeProps> = (props: ITimeProps): ReactElement => {
       const prev = data[i - 1]
       const cur = data[i]
 
-      const prevIndex = Utils.getTimeIndexByMinute(prev.timestamp ?? 0, tradeMinutes)
-      const currIndex = Utils.getTimeIndexByMinute(cur.timestamp ?? 0, tradeMinutes)
+      const prevIndex = Utils.getTimeIndexByMinute(prev.timestamp ?? 0, tradeMinutes, props.isFive ?? false)
+      const currIndex = Utils.getTimeIndexByMinute(cur.timestamp ?? 0, tradeMinutes, props.isFive ?? false)
 
       if (prevIndex === -1 || currIndex === -1) continue
 
@@ -108,7 +116,7 @@ const TimeLine: React.FC<ITimeProps> = (props: ITimeProps): ReactElement => {
       // 计算颜色
       let lineColor = TimeKDefaultProps.defaultColor
       if (closingPrice > 0) {
-        lineColor = (cur.price ?? 0) >= closingPrice ? riseColor || '' : fallColor || ''
+        lineColor = (cur.price ?? 0) > closingPrice ? riseColor || '' : fallColor || ''
       }
 
       lines.push(<line key={i} x1={x1} y1={y1} x2={x2} y2={y2} stroke={lineColor} strokeWidth={1} />)
@@ -147,18 +155,33 @@ const TimeLine: React.FC<ITimeProps> = (props: ITimeProps): ReactElement => {
 
     // 计算涨跌额| 涨跌幅
     if (closingPrice > 0) {
+      const obj = Handler.onCalculateRiseFall(data.riseFall, data.amplitude, riseColor, fallColor, flatColor) || {}
       const curPrice = price - closingPrice
       const { riseAndFall, amplitude } = Utils.onCalculateRiseAndFall(price, closingPrice)
+      let riseFall = obj.riseFall
+      let amp = obj.amplitude
+      let rfColor = obj.rfColor || ''
+      let ampColor = obj.ampColor || ''
+      if (riseFall === undefined) {
+        riseFall = `${curPrice > 0 ? '+' : ''}${curPrice.toFixed(2)}`
+        rfColor = curPrice > 0 ? riseColor : price === 0 ? flatColor : fallColor
+      }
+
+      if (amp === undefined) {
+        amp = amplitude || ''
+        ampColor = riseAndFall > 0 ? riseColor : price === 0 ? flatColor : fallColor
+      }
+
       tooltipData.push({
         label: '涨跌额',
-        value: `${curPrice > 0 ? '+' : ''}${price.toFixed(2)}`,
-        color: curPrice > 0 ? riseColor : price === 0 ? flatColor : fallColor
+        value: riseFall,
+        color: rfColor
       })
 
       tooltipData.push({
         label: '涨跌幅',
-        value: amplitude,
-        color: riseAndFall > 0 ? riseColor : price === 0 ? flatColor : fallColor
+        value: amp,
+        color: ampColor
       })
     }
 
@@ -205,7 +228,11 @@ const TimeLine: React.FC<ITimeProps> = (props: ITimeProps): ReactElement => {
     let minuteIndex = Math.floor(percent * totalMinutes)
 
     // 限制最大 index 到最后数据点的时间 index
-    const lastDataMinute = Utils.getTimeIndexByMinute(timeData[timeData.length - 1].timestamp, tradeMinutes)
+    const lastDataMinute = Utils.getTimeIndexByMinute(
+      timeData[timeData.length - 1].timestamp,
+      tradeMinutes,
+      props.isFive ?? false
+    )
     minuteIndex = Math.min(minuteIndex, lastDataMinute)
 
     // 根据 minuteIndex 反算 mouseX, 保证 cross 不超出最后时间位置, 需要在超出最大时间后 `钉死` 在最大时间点
@@ -214,7 +241,7 @@ const TimeLine: React.FC<ITimeProps> = (props: ITimeProps): ReactElement => {
 
     // 反推数据 index（建立 “分钟索引 -> 数据索引” 映射）
     const dataIndex = timeData.findIndex(
-      d => Utils.getTimeIndexByMinute(d.timestamp ?? 0, tradeMinutes) === minuteIndex
+      d => Utils.getTimeIndexByMinute(d.timestamp ?? 0, tradeMinutes, props.isFive ?? false) === minuteIndex
     )
     if (dataIndex === -1) return
 

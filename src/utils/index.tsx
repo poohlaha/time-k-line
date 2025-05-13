@@ -61,11 +61,11 @@ const Utils = {
       const time = tradTimes[i]
       let [start, end] = ['', '']
       if (time.indexOf('~') !== -1) {
-        ;[start, end] = time.split('~') || []
+        [start, end] = time.split('~') || []
       } else if (time.indexOf('-') !== -1) {
-        ;[start, end] = time.split('-') || []
+        [start, end] = time.split('-') || []
       } else {
-        ;[start, end] = [time, time]
+        [start, end] = [time, time]
       }
 
       if (i > 0 && !hasReduceOne) {
@@ -85,10 +85,10 @@ const Utils = {
   /**
    * 查找时间戳在交易时间中对应的 index
    */
-  getTimeIndexByMinute: (timestamp: number, tradeMinutes: number[]): number => {
+  getTimeIndexByMinute: (timestamp: number, tradeMinutes: number[], isFive: boolean = false): number => {
     const date = new Date(timestamp)
     const time = dayjs(date)
-    if (time.isSame(time.startOf('day'))) {
+    if (time.isSame(time.startOf('day')) || isFive) {
       // 如果是某一天的起始时间
       return tradeMinutes.indexOf(timestamp)
     }

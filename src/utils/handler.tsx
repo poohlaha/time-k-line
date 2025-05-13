@@ -513,6 +513,65 @@ const Handler = {
 
     const x = index * unitWidth + (unitWidth - barWidth) / 2
     return { x, barWidth }
+  },
+
+  /**
+   * 计算涨跌幅
+   */
+  onCalculateRiseFall: (
+    riseFall: string | number | undefined,
+    amplitude: string | number | undefined,
+    riseColor: string = '',
+    fallColor: string = '',
+    flatColor: string = ''
+  ) => {
+    let obj = {
+      riseFall,
+      amplitude,
+      rfColor: flatColor || '',
+      ampColor: flatColor || ''
+    }
+
+    const getRiseFall = (num: number, spec: string = '') => {
+      let color = flatColor || ''
+      let value = ''
+      if (num > 0) {
+        value = `+${num.toFixed(2)}${spec || ''}`
+        color = riseColor || ''
+      } else if (num < 0) {
+        value = `${num.toFixed(2)}${spec || ''}`
+        color = fallColor || ''
+      }
+
+      return { value, color }
+    }
+
+    // 涨跌额
+    if (obj.riseFall !== undefined) {
+      let objRf = obj.riseFall
+      if (typeof objRf === 'string') {
+        objRf = Number(objRf)
+      }
+
+      const { value, color } = getRiseFall(objRf)
+      obj.riseFall = value || ''
+      obj.rfColor = color || ''
+    }
+
+    // 涨跌幅
+    if (obj.amplitude !== undefined) {
+      let objAmp = obj.amplitude
+      if (typeof objAmp === 'string') {
+        objAmp = objAmp.replace('%', '')
+        objAmp = Number(objAmp)
+      }
+
+      const { value, color } = getRiseFall(objAmp, '%')
+      obj.amplitude = value || ''
+      obj.ampColor = color || ''
+    }
+
+    return obj
   }
 }
 

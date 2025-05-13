@@ -195,6 +195,8 @@ export interface ITimeDataItemProps {
   price: number // 价格
   volume: number // 成交量
   turnover: number // 成交额
+  riseFall?: string | number // 涨跌额
+  amplitude?: string | number // 涨跌幅
 }
 
 export type IVolumeDataItemProps = ITimeDataItemProps
@@ -209,12 +211,15 @@ export interface IKDataItemProps {
   volume: number // 成交量(单位: 股)
   turnover: number // 成交量(单位: 元或分, 需看实际单位)
   floatShare?: number // 流通股本(单位:股, 用于换手率计算)
+  riseFall?: string | number // 涨跌额
+  amplitude?: string | number // 涨跌幅
 }
 
 // 分时图和 K 线图整合属性
 export interface IShareLineProps extends IShareProps {
   className?: string
   time?: IShareLineTimeProps // 分时
+  fiveTime?: IShareLineTimeProps // 五日
   dailyK?: IShareLineKProps // 日K
   weekK?: IShareLineKProps // 周K
   monthK?: IShareLineKProps // 月K
@@ -225,18 +230,25 @@ export interface IShareLineProps extends IShareProps {
 
 // 分时图属性
 export interface IShareLineTimeProps {
+  show?: boolean
+  isFive?: boolean
   title?: string
   className?: string
+  closingPrice?: number
   tradeTimes?: Array<string> // 交易时间段, 如要更改, 请同时更改 xLabels 的值
   data: Array<ITimeDataItemProps> // 数据
+  basic?: IBasicProps // 基线
 }
 
 // 日K图属性
 export interface IShareLineKProps {
+  show?: boolean
   title?: string
   className?: string
+  closingPrice?: number
   data: Array<IKDataItemProps> // 数据
-  onGetMoreData?: () => void
+  basic?: IBasicProps // 基线
+  onGetMoreData?: () => Promise<Array<IKDataItemProps>>
 }
 
 // tabs 属性
