@@ -5,7 +5,7 @@
  */
 import React, { ReactElement, useEffect, useRef, useState } from 'react'
 import { IShareLineKProps, IShareLineProps, IShareLineTimeProps, IShareTabsProps, ITimeKProps } from '../types/share'
-import { DefaultShareLineProps, TimeKDefaultProps } from '../types/default'
+import { DefaultShareLineProps, KDefaultProps, TimeKDefaultProps } from '../types/default'
 import Utils from '../utils'
 import { Handler } from '../utils/handler'
 import TimeLine from './time'
@@ -224,6 +224,10 @@ const ShareLine: React.FC<IShareLineProps> = (props: IShareLineProps): ReactElem
     const height = props.height ?? '100%'
     const fontSize = props.fontSize ?? 0
     const fontFamily = Utils.isBlank(props.fontFamily || '') ? TimeKDefaultProps.fontFamily : props.fontFamily || ''
+    let zoomStep = props.zoomStep ?? 0
+    if (zoomStep === 0) {
+      zoomStep = KDefaultProps.zoomStep
+    }
     return {
       ...props,
       prefixClassName,
@@ -236,7 +240,8 @@ const ShareLine: React.FC<IShareLineProps> = (props: IShareLineProps): ReactElem
       monthK,
       tabs,
       fontSize,
-      fontFamily
+      fontFamily,
+      zoomStep
     } as IShareLineProps
   }
 
@@ -261,6 +266,7 @@ const ShareLine: React.FC<IShareLineProps> = (props: IShareLineProps): ReactElem
     const flatColor = commonProps.flatColor || ''
     const fontSize = commonProps.fontSize ?? TimeKDefaultProps.fontSize
     const fontFamily = commonProps.fontFamily || ''
+    const zoomStep = commonProps.zoomStep ?? KDefaultProps.zoomStep
 
     return {
       prefixClassName,
@@ -279,7 +285,8 @@ const ShareLine: React.FC<IShareLineProps> = (props: IShareLineProps): ReactElem
       fallColor,
       flatColor,
       fontSize,
-      fontFamily
+      fontFamily,
+      zoomStep
     } as ITimeKProps
   }
 

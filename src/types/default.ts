@@ -41,7 +41,7 @@ export const TimeKDefaultProps = {
 // K 线图默认属性
 export const KDefaultProps = {
   minCount: 25, // 展示最小的数量
-  zoomStep: 0.5, // 滚轴滚动的最小步
+  zoomStep: 0.8, // 滚轴滚动的最小步
   dragSpeed: 0.5, // 每拖动10px，平移多少个数据点
   rangeCount: 30 // 区间显示的数量
 }

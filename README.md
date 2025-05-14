@@ -257,6 +257,7 @@ const Demo = (): ReactElement => {
                                 show: true,
                                 className: 'bg-white shadow-md'
                             }}
+                            zoomStep={1.2}
                         />
                     </div>
                 </div>

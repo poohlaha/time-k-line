@@ -64,7 +64,8 @@ const KLine: React.FC<IKProps> = (props: IKProps): ReactElement => {
     lastX: 0,
     startY: 0,
     lastY: 0,
-    mode: 'none' as 'none' | 'pan' | 'zoom'
+    startDistance: 0, // 初始化双指距离
+    mode: 'none' as 'none' | 'pan' | 'zoom' | 'pinch'
   })
 
   useEffect(() => {
@@ -94,6 +95,17 @@ const KLine: React.FC<IKProps> = (props: IKProps): ReactElement => {
     const height = props.height - rect.height
     setSize({ width: props.width ?? 0, height: height < 0 ? 0 : height, maHeight: rect.height })
   }, [maRef])
+
+  /**
+   * 获取缩放大小
+   */
+  const getZoomStep = () => {
+    let zoomStep = props.zoomStep ?? 0
+    if (zoomStep === 0) {
+      zoomStep = KDefaultProps.zoomStep
+    }
+    return zoomStep
+  }
 
   /**
    * 获取更多数据
@@ -177,7 +189,7 @@ const KLine: React.FC<IKProps> = (props: IKProps): ReactElement => {
   }
 
   const onProcessWheel = (deltaX: number, deltaY: number) => {
-    const zoomStep = KDefaultProps.zoomStep
+    let zoomStep = getZoomStep()
     const maxCount = data.length
 
     // 判断操作类型：主方向为 X 是平移，主方向为 Y 是缩放
@@ -573,17 +585,50 @@ const KLine: React.FC<IKProps> = (props: IKProps): ReactElement => {
 
   const onTouchStart = (e: React.TouchEvent<SVGSVGElement>) => {
     onMouseLeave()
-    if (e.touches.length !== 1) return
+    if (!e.touches || e.touches.length === 0) return
+
     const touch = e.touches[0]
     touchRef.current.startX = touch.clientX
     touchRef.current.startY = touch.clientY
     touchRef.current.lastX = touch.clientX
     touchRef.current.mode = 'none'
+
+    // 如果双指，记录初始距离
+    if (e.touches.length === 2) {
+      const dx = e.touches[0].clientX - e.touches[1].clientX
+      const dy = e.touches[0].clientY - e.touches[1].clientY
+      touchRef.current.startDistance = Math.sqrt(dx * dx + dy * dy)
+      touchRef.current.mode = 'pinch'
+    }
   }
 
   const onTouchMove = (e: React.TouchEvent<SVGSVGElement>, yLabels: Array<number>, height: number) => {
     const touches = e.touches || []
-    if (!svgRef.current || data.length === 0 || touches.length !== 1) return
+    if (!svgRef.current || data.length === 0 || touches.length === 0) return
+
+    console.log('mode', touchRef.current.mode)
+
+    // 处理双指, 向外放大, 向内缩小
+    if (touches.length === 2) {
+      const dx = touches[0].clientX - touches[1].clientX
+      const dy = touches[0].clientY - touches[1].clientY
+      const distance = Math.sqrt(dx * dx + dy * dy)
+
+      if (touchRef.current.mode !== 'pinch') {
+        touchRef.current.startDistance = distance
+        touchRef.current.mode = 'pinch'
+        return
+      }
+
+      const delta = distance - (touchRef.current.startDistance || distance)
+      // const zoomFactor = delta > 0 ? 1.05 : 0.95
+
+      onWheel(0, -delta * 0.5)
+
+      // 更新参考距离
+      touchRef.current.startDistance = distance
+      return
+    }
 
     const touch = e.touches[0]
     const deltaX = touch.clientX - touchRef.current.lastX
@@ -600,8 +645,6 @@ const KLine: React.FC<IKProps> = (props: IKProps): ReactElement => {
         touchRef.current.mode = 'zoom'
       }
     }
-
-    console.log('mode', touchRef.current.mode)
 
     // 平移
     if (touchRef.current.mode === 'pan') {
@@ -628,6 +671,7 @@ const KLine: React.FC<IKProps> = (props: IKProps): ReactElement => {
       lastX: 0,
       startY: 0,
       lastY: 0,
+      startDistance: 0,
       mode: 'none' as 'none' | 'pan' | 'zoom'
     }
   }

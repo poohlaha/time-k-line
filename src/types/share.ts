@@ -168,6 +168,7 @@ export interface IShareProps {
   flatColor?: string // 持平颜色
   fontSize?: number // 字体大小
   fontFamily?: string // 字体名称
+  zoomStep?: number // 缩放大小
   onGetMoreData?: () => Promise<Array<IKDataItemProps>>
 }
 
@@ -228,6 +229,7 @@ export interface IShareLineProps extends IShareProps {
   width?: number // 长度
   height?: number // 宽度
   tabs?: IShareTabsProps // tabs 属性
+  zoomStep?: number // 缩放
 }
 
 // 分时图属性
