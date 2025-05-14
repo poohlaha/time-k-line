@@ -667,7 +667,12 @@ const HandleCommon = {
   /**
    * 十字准线
    */
-  getCross: (cross: IShareCrossProps, crossProps: { [K: string]: any } = {}, prefixClassName: string = '') => {
+  getCross: (
+    cross: IShareCrossProps,
+    crossProps: { [K: string]: any } = {},
+    prefixClassName: string = '',
+    height: number
+  ) => {
     if (!cross.show) return null
 
     return (
@@ -678,7 +683,9 @@ const HandleCommon = {
         show={crossProps.show}
         yLeftLabel={crossProps.yLeftLabel}
         yRightLabel={crossProps.yRightLabel}
+        xBottomLabel={crossProps.xBottomLabel}
         prefixClassName={prefixClassName || ''}
+        innerHeight={height}
       />
     )
   },
@@ -783,7 +790,7 @@ const HandleCommon = {
         {HandleCommon.getBasic(basic, hasBasic, grid, prefixClassName || '')}
 
         {/* 十字准线 */}
-        {HandleCommon.getCross(cross, crossProps, prefixClassName || '')}
+        {HandleCommon.getCross(cross, crossProps, prefixClassName || '', height)}
 
         {/* 成交量柱状图 */}
         {HandleCommon.getVolumeBars(

@@ -100,8 +100,10 @@ export interface IShareCrossProps extends ICrossProps {
   y: number
   width: number
   height: number
+  innerHeight: number
   yLeftLabel: string
   yRightLabel: string
+  xBottomLabel: string
   fontSize: number
   fontFamily: string
   isAxisLeft: boolean

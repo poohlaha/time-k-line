@@ -31,7 +31,15 @@ const KLine: React.FC<IKProps> = (props: IKProps): ReactElement => {
 
   const [size, setSize] = useState<{ [K: string]: any }>({ width: 0, height: 0, maHeight: 0 })
   const [tooltipProps, setTooltipProps] = useState({ show: false, x: 0, y: 0, data: [] })
-  const [crossProps, setCrossProps] = useState({ show: false, x: 0, y: 0, index: 0, yLeftLabel: '', yRightLabel: '' })
+  const [crossProps, setCrossProps] = useState({
+    show: false,
+    x: 0,
+    y: 0,
+    index: 0,
+    yLeftLabel: '',
+    yRightLabel: '',
+    xBottomLabel: ''
+  })
   const [ma, setMa] = useState({ ma5: '0.00', ma10: '0.00', ma20: '0.00' })
 
   const wheelDeltaRef = useRef<{ deltaX: number; deltaY: number } | null>(null)
@@ -343,7 +351,7 @@ const KLine: React.FC<IKProps> = (props: IKProps): ReactElement => {
 
     tooltipData.push({
       label: '时间',
-      value: dayjs(timestamp).format('MM-DD HH:mm')
+      value: Utils.formatTimestamp(timestamp, 'MM-DD')
     })
 
     tooltipData.push({
@@ -479,6 +487,11 @@ const KLine: React.FC<IKProps> = (props: IKProps): ReactElement => {
     const yPoint = Utils.getPriceByYPosition(mouseY - rect.top, yLabels, height)
     const yLeftLabel = yPoint === null ? '' : `${yPoint.toFixed(2)}`
 
+    if (index < 0 || index >= data.length) {
+      // setTooltipProps({ show: false, x: 0, y: 0, data: [] })
+      return -1
+    }
+
     if (needCross) {
       setCrossProps({
         show: true,
@@ -486,13 +499,9 @@ const KLine: React.FC<IKProps> = (props: IKProps): ReactElement => {
         y: mouseY - rect.top,
         index,
         yLeftLabel,
-        yRightLabel: yLeftLabel
+        yRightLabel: yLeftLabel,
+        xBottomLabel: Utils.formatTimestamp(data[index]?.timestamp, 'MM-DD')
       })
-    }
-
-    if (index < 0 || index >= data.length) {
-      // setTooltipProps({ show: false, x: 0, y: 0, data: [] })
-      return -1
     }
 
     // 计算对应 index 的 MA 值
@@ -517,7 +526,7 @@ const KLine: React.FC<IKProps> = (props: IKProps): ReactElement => {
 
     if (draggable.current.isDragging) {
       // 隐藏十字准线和tooltip
-      setCrossProps({ show: false, x: 0, y: 0, index: 0, yLeftLabel: '', yRightLabel: '' })
+      setCrossProps({ show: false, x: 0, y: 0, index: 0, yLeftLabel: '', yRightLabel: '', xBottomLabel: '' })
       setTooltipProps({ show: false, x: 0, y: 0, data: [] })
 
       const deltaX = e.clientX - draggable.current.lastX
@@ -554,7 +563,7 @@ const KLine: React.FC<IKProps> = (props: IKProps): ReactElement => {
 
   const onMouseLeave = () => {
     draggable.current.isDragging = false
-    setCrossProps({ show: false, x: 0, y: 0, index: 0, yLeftLabel: '', yRightLabel: '' })
+    setCrossProps({ show: false, x: 0, y: 0, index: 0, yLeftLabel: '', yRightLabel: '', xBottomLabel: '' })
     setTooltipProps({ show: false, x: 0, y: 0, data: [] })
   }
 

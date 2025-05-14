@@ -9,6 +9,8 @@ import Utils from '../../utils'
 import { AxisDefaultProps, DefaultCrossProps } from '../../types/default'
 
 const Cross: React.FC<IShareCrossProps> = (props: IShareCrossProps): ReactElement => {
+  const padding = 5
+
   /**
    * 计算左边和右边显示文字
    */
@@ -50,8 +52,33 @@ const Cross: React.FC<IShareCrossProps> = (props: IShareCrossProps): ReactElemen
     return { leftLabel, rightLabel, leftTextWidth, rightTextWidth, leftTextHeight, rightTextHeight }
   }
 
-  const getLabelNode = () => {
-    const padding = 6
+  const getTopBottomLabel = () => {
+    if (Utils.isBlank(props.xBottomLabel || '')) {
+      return null
+    }
+
+    const bottomSize = Utils.onMeasureTextSize(`${props.xBottomLabel || ''}`, props.fontSize, props.fontFamily)
+
+    let bX = props.x - bottomSize.width / 2 - padding
+    if (bX < 0) {
+      bX = props.x + padding
+    }
+
+    if (bX > props.width - padding - bottomSize.width) {
+      bX = props.x - bottomSize.width - padding
+    }
+
+    const bY = props.innerHeight - bottomSize.height - padding
+    return {
+      bottomLabel: props.xBottomLabel,
+      bX,
+      bY,
+      bottomTextHeight: bottomSize.height,
+      bottomTextWidth: bottomSize.width
+    }
+  }
+
+  const getLRLabelNode = () => {
     const labelProps = getLeftRightLabel()
     if (labelProps === null) return null
 
@@ -113,6 +140,42 @@ const Cross: React.FC<IShareCrossProps> = (props: IShareCrossProps): ReactElemen
     )
   }
 
+  const getTBLabelNode = () => {
+    const labelProps = getTopBottomLabel()
+    if (labelProps === null) return null
+
+    const bottomRectHeight = labelProps.bottomTextHeight + padding
+    const rectBX = labelProps.bX - padding / 2
+    const rectBY = props.innerHeight - bottomRectHeight
+
+    return (
+      !Utils.isBlank(labelProps.bottomLabel || '') && (
+        <>
+          <rect
+            x={rectBX}
+            y={rectBY}
+            width={labelProps.bottomTextWidth + padding}
+            height={bottomRectHeight + padding}
+            fill={props.textBackgroundColor}
+            rx={6}
+            ry={6}
+          />
+          <text
+            x={rectBX + padding / 2}
+            y={rectBY + padding + bottomRectHeight / 2}
+            fill={props.textColor}
+            textAnchor="start"
+            fontSize={props.fontSize}
+            fontFamily={props.fontFamily}
+            style={{ userSelect: 'none', pointerEvents: 'none' }}
+          >
+            {labelProps.bottomLabel || ''}
+          </text>
+        </>
+      )
+    )
+  }
+
   const render = () => {
     const show = props.show ?? true
     if (!show) return <div></div>
@@ -129,7 +192,11 @@ const Cross: React.FC<IShareCrossProps> = (props: IShareCrossProps): ReactElemen
         {/* 横向 */}
         <line x1={0} y1={props.y} x2={props.width} y2={props.y} stroke={color} strokeDasharray={strokeDasharray} />
 
-        {getLabelNode()}
+        {/* 横向 */}
+        {getLRLabelNode()}
+
+        {/* 纵向 */}
+        {getTBLabelNode()}
       </svg>
     )
   }

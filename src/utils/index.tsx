@@ -32,6 +32,16 @@ const Utils = {
   },
 
   /**
+   * 格式化时间戳
+   */
+  formatTimestamp: (ts: number | string, format: string = 'MM-DD HH:mm') => {
+    let tsNum = typeof ts === 'string' ? Number(ts) : ts
+    // 判断是秒级（10位）就乘 1000 转换为毫秒
+    const correctedTs = tsNum < 1e12 ? tsNum * 1000 : tsNum
+    return dayjs(correctedTs).format(format)
+  },
+
+  /**
    * 获取交易时间段, 拆分为每分钟
    */
   getTradingMinutes: (tradTimes: Array<string> = []) => {

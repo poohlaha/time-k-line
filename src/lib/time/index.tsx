@@ -7,14 +7,21 @@ import React, { ReactElement, useState } from 'react'
 import { AxisDefaultProps, TimeKDefaultProps } from '../../types/default'
 import { ITimeProps, TRADE_TIMES } from '../../types/time'
 import Tooltip from '../../components/tooltip'
-import dayjs from 'dayjs'
 import Utils from '../../utils'
 import { IShareTooltipProps, IShareCrossProps, ITimeDataItemProps } from '../../types/share'
 import { Handler, HandleCommon } from '../../utils/handler'
 
 const TimeLine: React.FC<ITimeProps> = (props: ITimeProps): ReactElement => {
   const [tooltipProps, setTooltipProps] = useState({ show: false, x: 0, y: 0, data: [] })
-  const [crossProps, setCrossProps] = useState({ show: false, x: 0, y: 0, index: 0, yLeftLabel: '', yRightLabel: '' })
+  const [crossProps, setCrossProps] = useState({
+    show: false,
+    x: 0,
+    y: 0,
+    index: 0,
+    yLeftLabel: '',
+    yRightLabel: '',
+    xBottomLabel: ''
+  })
   const [focusPoint, setFocusPoint] = useState<{ x: number; y: number } | null>(null) // 圆点
 
   /**
@@ -145,7 +152,7 @@ const TimeLine: React.FC<ITimeProps> = (props: ITimeProps): ReactElement => {
 
     tooltipData.push({
       label: '时间',
-      value: dayjs(data.timestamp ?? 0).format('MM-DD HH:mm')
+      value: Utils.formatTimestamp(data.timestamp)
     })
 
     tooltipData.push({
@@ -257,7 +264,15 @@ const TimeLine: React.FC<ITimeProps> = (props: ITimeProps): ReactElement => {
     if (cross.show) {
       const yPoint = Utils.getPriceByYPosition(mouseY, yLabels, height)
       const yLeftLabel = yPoint === null ? '' : `${yPoint.toFixed(2)}`
-      setCrossProps({ show: true, x: fixedMouseX, y: mouseY, index: clampedIndex, yLeftLabel, yRightLabel: yLeftLabel })
+      setCrossProps({
+        show: true,
+        x: fixedMouseX,
+        y: mouseY,
+        index: clampedIndex,
+        yLeftLabel,
+        yRightLabel: yLeftLabel,
+        xBottomLabel: Utils.formatTimestamp(data.timestamp)
+      })
     }
 
     const tooltipData = getTooltipData(data, riseColor, fallColor, flatColor)
@@ -272,7 +287,7 @@ const TimeLine: React.FC<ITimeProps> = (props: ITimeProps): ReactElement => {
   }
 
   const onMouseLeave = () => {
-    setCrossProps({ show: false, x: 0, y: 0, index: 0, yLeftLabel: '', yRightLabel: '' })
+    setCrossProps({ show: false, x: 0, y: 0, index: 0, yLeftLabel: '', yRightLabel: '', xBottomLabel: '' })
     setTooltipProps({ show: false, x: 0, y: 0, data: [] })
     setFocusPoint(null)
   }
